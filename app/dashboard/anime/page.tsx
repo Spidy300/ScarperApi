@@ -2,7 +2,7 @@
 
 import { useAuth } from "@/contexts/auth-context"
 import { useRouter, usePathname } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import {
   Home,
   Settings,
@@ -11,7 +11,9 @@ import {
   FileText,
   LogOut,
   User,
-  Film
+  Film,
+  Search,
+  X
 } from "lucide-react"
 import {
   Sidebar,
@@ -42,6 +44,14 @@ import { Card, CardContent } from "@/components/ui/card"
 import { signOut } from "@/lib/auth"
 import { ThemeToggle } from "@/components/theme-toggle"
 import Image from "next/image"
+import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 // Interface for the API response
 interface AnimePost {
@@ -201,12 +211,72 @@ function UserMenu() {
   )
 }
 
-function Navbar() {
+interface Category {
+  id: string
+  name: string
+  url: string
+}
+
+const categories: Category[] = [
+  { id: "all", name: "All", url: "" },
+  { id: "hindi", name: "Hindi", url: "/category/language/hindi/" },
+  { id: "english", name: "English", url: "/category/language/english/" },
+  { id: "tamil", name: "Tamil", url: "/category/language/tamil/" },
+  { id: "crunchyroll", name: "Crunchyroll", url: "/category/network/crunchyroll/" },
+  { id: "disney", name: "Disney", url: "/category/network/disney/" },
+  // { id: "hotstar", name: "Hotstar", url: "/category/network/hotstar/" },
+]
+
+function Navbar({ 
+  searchQuery, 
+  onSearchChange, 
+  selectedCategory, 
+  onCategoryChange 
+}: { 
+  searchQuery: string, 
+  onSearchChange: (query: string) => void,
+  selectedCategory: string,
+  onCategoryChange: (category: string) => void
+}) {
   return (
     <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
       <SidebarTrigger className="-ml-1" />
-      <div className="flex flex-1 items-center justify-between">
-        <h1 className="text-lg font-semibold">Anime Collection</h1>
+      <div className="flex flex-1 items-center justify-between gap-4">
+        <div className="flex items-center gap-4 flex-1">
+          {/* Category Dropdown */}
+          <Select value={selectedCategory} onValueChange={onCategoryChange}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="Category" />
+            </SelectTrigger>
+            <SelectContent>
+              {categories.map((category) => (
+                <SelectItem key={category.id} value={category.id}>
+                  {category.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Search Bar */}
+          <div className="relative flex-1 max-w-sm md:max-w-md lg:max-w-lg">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Search anime..."
+              value={searchQuery}
+              onChange={(e) => onSearchChange(e.target.value)}
+              className="pl-10 pr-10 w-full"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => onSearchChange("")}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+        </div>
         <div className="flex items-center gap-2">
           <ThemeToggle />
         </div>
@@ -215,10 +285,52 @@ function Navbar() {
   )
 }
 
-function AnimeGrid({ posts }: { posts: AnimePost[] }) {
+// Add debounce hook for search
+function useDebounce(value: string, delay: number) {
+  const [debouncedValue, setDebouncedValue] = useState(value)
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value)
+    }, delay)
+
+    return () => {
+      clearTimeout(handler)
+    }
+  }, [value, delay])
+
+  return debouncedValue
+}
+
+function AnimeGrid({ posts, searchQuery, isSearching }: { posts: AnimePost[], searchQuery: string, isSearching: boolean }) {
+  // Filter posts based on search query
+  const filteredPosts = posts.filter(post =>
+    post.title.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
+  if (isSearching) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[50vh] text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
+        <p className="text-lg font-medium mb-2">Searching...</p>
+        <p className="text-muted-foreground">Finding anime for you</p>
+      </div>
+    )
+  }
+
+  if (searchQuery && filteredPosts.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[50vh] text-center">
+        <Search className="h-12 w-12 text-muted-foreground mb-4" />
+        <p className="text-lg font-medium mb-2">No anime found</p>
+        <p className="text-muted-foreground">Try searching with different keywords</p>
+      </div>
+    )
+  }
+
   return (
     <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-2 sm:gap-4 md:gap-5 lg:gap-6 mt-6">
-      {posts.map((post, index) => {
+      {filteredPosts.map((post, index) => {
         // Extract the ID from the URL for our internal routing
         const urlParts = post.postUrl.split('/');
         // The ID is the second-to-last part in the URL
@@ -255,8 +367,15 @@ export default function AnimeDashboard() {
   const { user, loading: authLoading } = useAuth()
   const router = useRouter()
   const [anime, setAnime] = useState<AnimePost[]>([])
+  const [allAnime, setAllAnime] = useState<AnimePost[]>([]) // Store original data
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [isSearching, setIsSearching] = useState(false)
+  const [selectedCategory, setSelectedCategory] = useState("all")
+  
+  // Debounce search query to avoid too many API calls
+  const debouncedSearchQuery = useDebounce(searchQuery, 500)
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -264,30 +383,95 @@ export default function AnimeDashboard() {
     }
   }, [user, authLoading, router])
 
-  useEffect(() => {
-    const fetchAnime = async () => {
-      try {
-        setLoading(true)
-        const res = await fetch('/api/posts')
-        const data: ApiResponse = await res.json()
-
-        if (data.success) {
-          setAnime(data.posts)
-        } else {
-          setError("Failed to fetch anime data")
-        }
-      } catch (err) {
-        setError("An error occurred while fetching anime data")
-        console.error(err)
-      } finally {
-        setLoading(false)
+  // Update fetchAnime to handle categories
+  const fetchAnime = useCallback(async (category: string = "all", search: string = "") => {
+    try {
+      setLoading(true)
+      
+      // Build query parameters
+      const params = new URLSearchParams()
+      if (search.trim()) {
+        params.append('search', search.trim())
       }
+      if (category !== "all") {
+        params.append('category', category)
+      }
+      
+      const queryString = params.toString()
+      const url = `/api/posts${queryString ? `?${queryString}` : ''}`
+      
+      const res = await fetch(url)
+      const data: ApiResponse = await res.json()
+
+      if (data.success) {
+        setAnime(data.posts)
+        if (!search.trim()) {
+          setAllAnime(data.posts) // Only update all anime when not searching
+        }
+      } else {
+        setError("Failed to fetch anime data")
+      }
+    } catch (err) {
+      setError("An error occurred while fetching anime data")
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  // Fetch initial anime data
+  useEffect(() => {
+    if (user) {
+      fetchAnime(selectedCategory)
+    }
+  }, [user, selectedCategory, fetchAnime])
+
+  // Handle search functionality
+  const performSearch = useCallback(async (query: string) => {
+    if (!query.trim()) {
+      // If search is empty, fetch category data
+      fetchAnime(selectedCategory)
+      setIsSearching(false)
+      return
     }
 
-    if (user) {
-      fetchAnime()
+    setIsSearching(true)
+    try {
+      // Always search via API when there's a query
+      const params = new URLSearchParams()
+      params.append('search', query.trim())
+      if (selectedCategory !== "all") {
+        params.append('category', selectedCategory)
+      }
+      
+      const res = await fetch(`/api/posts?${params.toString()}`)
+      const data: ApiResponse = await res.json()
+
+      if (data.success) {
+        setAnime(data.posts)
+      } else {
+        setAnime([])
+      }
+    } catch (err) {
+      console.error("Search error:", err)
+      setAnime([])
+    } finally {
+      setIsSearching(false)
     }
-  }, [user])
+  }, [selectedCategory, fetchAnime])
+
+  // Update category change handler
+  const handleCategoryChange = (category: string) => {
+    setSelectedCategory(category)
+    setSearchQuery("") // Clear search when changing category
+  }
+
+  // Effect for debounced search
+  useEffect(() => {
+    if (allAnime.length > 0) { // Only search if we have loaded initial data
+      performSearch(debouncedSearchQuery)
+    }
+  }, [debouncedSearchQuery, performSearch, allAnime.length])
 
   if (authLoading) {
     return (
@@ -305,7 +489,12 @@ export default function AnimeDashboard() {
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
-        <Navbar />
+        <Navbar 
+          searchQuery={searchQuery} 
+          onSearchChange={setSearchQuery}
+          selectedCategory={selectedCategory}
+          onCategoryChange={handleCategoryChange}
+        />
         <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
           {loading ? (
             <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-2 sm:gap-4 md:gap-5 lg:gap-6 mt-6">
@@ -322,7 +511,7 @@ export default function AnimeDashboard() {
               <Button onClick={() => window.location.reload()}>Retry</Button>
             </div>
           ) : (
-            <AnimeGrid posts={anime} />
+            <AnimeGrid posts={anime} searchQuery={searchQuery} isSearching={isSearching} />
           )}
         </div>
       </SidebarInset>
