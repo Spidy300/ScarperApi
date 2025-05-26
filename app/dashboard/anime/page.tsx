@@ -331,15 +331,21 @@ function AnimeGrid({ posts, searchQuery, isSearching }: { posts: AnimePost[], se
   return (
     <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-2 sm:gap-4 md:gap-5 lg:gap-6 mt-6">
       {filteredPosts.map((post, index) => {
+        // Detect if this is a movie or series based on URL
+        const isMovie = post.postUrl.includes('/movie/')
+        
         // Extract the ID from the URL for our internal routing
         const urlParts = post.postUrl.split('/');
         // The ID is the second-to-last part in the URL
         const id = urlParts[urlParts.length - 2] || '';
         
+        // Generate the appropriate route based on content type
+        const linkUrl = `/dashboard/anime/${id}`
+        
         return (
           <a 
             key={index}
-            href={`/dashboard/anime/${id}`}
+            href={linkUrl}
             className="transition-transform hover:scale-[1.03] focus:outline-none focus:ring-2 focus:ring-primary rounded-lg overflow-hidden"
           >
             <div className="overflow-hidden flex flex-col">
@@ -352,6 +358,14 @@ function AnimeGrid({ posts, searchQuery, isSearching }: { posts: AnimePost[], se
                   sizes="(max-width: 640px) 33vw, (max-width: 768px) 33vw, 25vw"
                   quality={80}
                 />
+                {/* Add a badge to distinguish movies from series */}
+                {isMovie && (
+                  <div className="absolute top-2 left-2">
+                    <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">
+                      Movie
+                    </span>
+                  </div>
+                )}
               </div>
               <h3 className="text-center font-medium mt-1 sm:mt-2 text-[10px] sm:text-xs md:text-sm line-clamp-1 sm:line-clamp-2">{post.title}</h3>
             </div>

@@ -59,6 +59,24 @@ interface ApiResponse {
   error?: string;
 }
 
+// Add new interfaces for movie data
+interface MovieInfo {
+  duration: string;
+  year: string;
+  network?: string;
+  networkIcon?: string;
+}
+
+interface MovieDetails {
+  title: string;
+  imageUrl?: string;
+  info: MovieInfo;
+  overview: string;
+  genres?: Genre[];
+  languages?: Language[];
+  isMovie: boolean;
+}
+
 // Function to fetch episodes for a specific season
 async function fetchSeasonEpisodes(postId: string, seasonNumber: number): Promise<Episode[]> {
   try {
@@ -333,6 +351,121 @@ async function scrapeAnimeDetails(id: string, fetchAllSeasons = false): Promise<
   }
 }
 
+// Function to scrape movie details
+async function scrapeMovieDetails(id: string): Promise<MovieDetails> {
+  try {
+    const response = await fetch(`https://animesalt.cc/movie/${id}/`, { 
+      cache: 'no-cache',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch movie details: ${response.status}`);
+    }
+
+    const html = await response.text();
+    const $ = cheerio.load(html);
+    
+    // Extract movie title
+    const title = $('h1').first().text().trim() || 
+                  $('title').text().split('|')[0]?.trim() ||
+                  $('.entry-title').first().text().trim();
+    
+    // Extract movie image
+    let imageUrl = $('div[style*="text-align: center"] img').data('src') || 
+                   $('div[style*="text-align: center"] img').attr('src') ||
+                   $('img.lazyload').data('src') ||
+                   $('img.lazyload').attr('src');
+    
+    imageUrl = normalizeImageUrl(imageUrl);
+    
+    // Extract duration, year, and network from info pills
+    let duration = "Unknown";
+    let year = "Unknown";
+    let network = "";
+    let networkIcon = "";
+    
+    // Look for info pills with duration and year
+    $('div[style*="background-color: rgba(255, 255, 255, 0.05)"]').each((_, el) => {
+      const text = $(el).text().trim();
+      
+      // Extract duration (e.g., "1h 50m")
+      const durationMatch = text.match(/(\d+h\s*\d*m?|\d+\s*min)/i);
+      if (durationMatch) {
+        duration = durationMatch[1];
+      }
+      
+      // Extract year
+      const yearMatch = text.match(/\b(20\d{2})\b/);
+      if (yearMatch) {
+        year = yearMatch[1];
+      }
+      
+      // Extract network info
+      const networkLink = $(el).find('a[href*="/category/network/"]');
+      if (networkLink.length > 0) {
+        const networkHref = networkLink.attr('href');
+        if (networkHref) {
+          network = networkHref.split('/').filter(Boolean).pop() || '';
+        }
+        
+        const networkImg = networkLink.find('img');
+        if (networkImg.length > 0) {
+          networkIcon = networkImg.attr('src') || networkImg.data('src') || '';
+          if (networkIcon && networkIcon.startsWith('//')) {
+            networkIcon = 'https:' + networkIcon;
+          }
+        }
+      }
+    });
+    
+    // Extract overview
+    const overview = $('#overview-text p').text().trim() || 
+                     $('div[style*="rgba(17, 24, 39, 0.4)"] p').first().text().trim() ||
+                     '';
+    
+    // Extract genres
+    const genres: Genre[] = [];
+    $('h4:contains("Genres")').parent().find('a[href*="/category/genre/"]').each((_, el) => {
+      const genreElement = $(el);
+      genres.push({
+        name: genreElement.text().trim(),
+        url: genreElement.attr('href')
+      });
+    });
+    
+    // Extract languages
+    const languages: Language[] = [];
+    $('h4:contains("Languages")').parent().find('a[href*="/category/language/"]').each((_, el) => {
+      const langElement = $(el);
+      languages.push({
+        name: langElement.text().trim(),
+        url: langElement.attr('href')
+      });
+    });
+
+    return {
+      title,
+      imageUrl,
+      info: {
+        duration,
+        year,
+        network,
+        networkIcon
+      },
+      overview,
+      // genres,
+      languages,
+      isMovie: true
+    };
+  } catch (error) {
+    console.error('Error scraping movie details:', error);
+    throw error;
+  }
+}
+
 export async function GET(
   request: Request,
   { params }: { params: { id: string } }
@@ -341,10 +474,6 @@ export async function GET(
     const { id } = params;
     const url = new URL(request.url);
     
-    // Query parameters:
-    // season=<number> - Get episodes from a specific season
-    // all_seasons=true - Get episodes from all seasons (overrides season parameter)
-    // episodes=false - Don't include episodes in the response
     const seasonParam = url.searchParams.get('season');
     const includeEpisodes = url.searchParams.get('episodes') !== 'false';
     const fetchAllSeasons = url.searchParams.get('all_seasons') === 'true';
@@ -356,7 +485,61 @@ export async function GET(
       }, { status: 400 });
     }
     
-    // First, check if specific season is requested via season parameter
+    // Check if this is a movie by making a test request to movie URL
+    let isMovie = false;
+    try {
+      const movieTestResponse = await fetch(`https://animesalt.cc/movie/${id}/`, {
+        method: 'HEAD',
+        cache: 'no-cache'
+      });
+      isMovie = movieTestResponse.ok;
+    } catch {
+      // If movie URL fails, assume it's a series
+      isMovie = false;
+    }
+    
+    // Handle movie requests
+    if (isMovie) {
+      const movieDetails = await scrapeMovieDetails(id);
+      
+      // Create a movie episode that represents the full movie
+      const movieEpisode: Episode = {
+        id: id,
+        title: movieDetails.title,
+        link: `https://animesalt.cc/movie/${id}/`,
+        season: 1,
+        number: 1,
+        imageUrl: movieDetails.imageUrl
+      };
+      
+      return NextResponse.json({
+        success: true,
+        animeName: movieDetails.title,
+        details: {
+          title: movieDetails.title,
+          imageUrl: movieDetails.imageUrl,
+          info: {
+            seasons: 1,
+            episodeCount: 1,
+            duration: movieDetails.info.duration,
+            year: movieDetails.info.year
+          },
+          availableSeasons: [{
+            number: 1,
+            text: "Movie",
+            dataPost: ""
+          }],
+          overview: movieDetails.overview,
+          isMovie: true,
+          network: movieDetails.info.network,
+          networkIcon: movieDetails.info.networkIcon
+        },
+        languages: movieDetails.languages,
+        episodes: [movieEpisode] // Return the movie as a single episode
+      });
+    }
+    
+    // Handle series requests (existing logic)
     if (seasonParam && !fetchAllSeasons) {
       console.log(`Fetching episodes for specific season: ${seasonParam}`);
       

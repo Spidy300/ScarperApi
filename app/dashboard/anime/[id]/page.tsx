@@ -272,7 +272,7 @@ function Navbar({ title }: { title: string }) {
 }
 
 // Episode card component
-function EpisodeCard({ episode }: { episode: Episode }) {
+function EpisodeCard({ episode, isMovie = false }: { episode: Episode, isMovie?: boolean }) {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [videoUrl, setVideoUrl] = useState<string>("")
   const [loading, setLoading] = useState(false)
@@ -338,9 +338,15 @@ function EpisodeCard({ episode }: { episode: Episode }) {
             <div className="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
               <Play className="h-12 w-12 text-white" />
             </div>
-            <Badge className="absolute bottom-2 right-2">
-              S{episode.season} E{episode.number}
-            </Badge>
+            {isMovie ? (
+              <Badge className="absolute bottom-2 right-2 bg-red-500">
+                Movie
+              </Badge>
+            ) : (
+              <Badge className="absolute bottom-2 right-2">
+                S{episode.season} E{episode.number}
+              </Badge>
+            )}
           </div>
           <div className="p-3">
             <h3 className="font-medium truncate">{episode.title}</h3>
@@ -353,7 +359,7 @@ function EpisodeCard({ episode }: { episode: Episode }) {
           <DialogHeader>
             <DialogTitle>{episode.title}</DialogTitle>
             <DialogDescription>
-              Season {episode.season}, Episode {episode.number}
+              {isMovie ? "Movie" : `Season ${episode.season}, Episode ${episode.number}`}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -383,18 +389,6 @@ function EpisodeCard({ episode }: { episode: Episode }) {
                 </Button>
               </div>
             </div>
-            {/* {videoUrl && (
-              <div className="flex gap-2">
-                <Button
-                  variant="default"
-                  className="flex-1"
-                  onClick={() => window.open(videoUrl, '_blank')}
-                >
-                  <Play className="h-4 w-4 mr-2" />
-                  Watch Now
-                </Button>
-              </div>
-            )} */}
           </div>
         </DialogContent>
       </Dialog>
@@ -458,6 +452,9 @@ export default function AnimeDetailPage({ params }: { params: { id: string } }) 
       fetchAnimeDetails()
     }
   }, [user, id])
+
+  // Check if this is a movie based on the details
+  const isMovie = animeDetails?.details?.isMovie || false;
 
   // Group episodes by season for tab display
   const episodesBySeason = animeDetails?.episodes 
@@ -587,62 +584,81 @@ export default function AnimeDetailPage({ params }: { params: { id: string } }) 
                 </div>
               </div>
               
-              {/* Episodes Section with Dropdown for Seasons */}
+              {/* Episodes Section - Modified for movies */}
               <div className="mt-6">
-                <div className="flex items-center gap-4 mb-4">
-                  {/* <h2 className="text-xl font-semibold">Episodes</h2> */}
-                  
-                  {seasonNumbers.length > 0 && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="flex items-center gap-2">
-                          Season {activeTab}
-                          <svg
-                            width="15"
-                            height="15"
-                            viewBox="0 0 15 15"
-                            fill="none"
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="h-4 w-4"
-                          >
-                            <path
-                              d="M4.93179 5.43179C4.75605 5.60753 4.75605 5.89245 4.93179 6.06819C5.10753 6.24392 5.39245 6.24392 5.56819 6.06819L7.49999 4.13638L9.43179 6.06819C9.60753 6.24392 9.89245 6.24392 10.0682 6.06819C10.2439 5.89245 10.2439 5.60753 10.0682 5.43179L7.81819 3.18179C7.73379 3.0974 7.61933 3.04999 7.49999 3.04999C7.38064 3.04999 7.26618 3.0974 7.18179 3.18179L4.93179 5.43179ZM10.0682 9.56819C10.2439 9.39245 10.2439 9.10753 10.0682 8.93179C9.89245 8.75606 9.60753 8.75606 9.43179 8.93179L7.49999 10.8636L5.56819 8.93179C5.39245 8.75606 5.10753 8.75606 4.93179 8.93179C4.75605 9.10753 4.75605 9.39245 4.93179 9.56819L7.18179 11.8182C7.26618 11.9026 7.38064 11.95 7.49999 11.95C7.61933 11.95 7.73379 11.9026 7.81819 11.8182L10.0682 9.56819Z"
-                              fill="currentColor"
-                              fillRule="evenodd"
-                              clipRule="evenodd"
-                            ></path>
-                          </svg>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start">
-                        {seasonNumbers.map((season) => (
-                          <DropdownMenuItem 
-                            key={season}
-                            onClick={() => setActiveTab(season.toString())}
-                            className={activeTab === season.toString() ? "bg-accent" : ""}
-                          >
-                            Season {season}
-                          </DropdownMenuItem>
-                        ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
-                </div>
-                
-                {seasonNumbers.length > 0 ? (
+                {isMovie ? (
+                  // Movie display - show as single episode
                   <div>
-                    {seasonNumbers.map((season) => (
-                      season.toString() === activeTab && (
-                        <div key={season} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                          {episodesBySeason[season].map((episode) => (
-                            <EpisodeCard key={episode.id} episode={episode} />
-                          ))}
-                        </div>
-                      )
-                    ))}
+                    <h2 className="text-xl font-semibold mb-4">Watch Movie</h2>
+                    {animeDetails.episodes && animeDetails.episodes.length > 0 ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        <EpisodeCard 
+                          key={animeDetails.episodes[0].id} 
+                          episode={animeDetails.episodes[0]} 
+                          isMovie={true}
+                        />
+                      </div>
+                    ) : (
+                      <p className="text-muted-foreground">Movie not available.</p>
+                    )}
                   </div>
                 ) : (
-                  <p className="text-muted-foreground">No episodes available.</p>
+                  // Series display - existing logic
+                  <div>
+                    <div className="flex items-center gap-4 mb-4">
+                      {seasonNumbers.length > 0 && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" className="flex items-center gap-2">
+                              Season {activeTab}
+                              <svg
+                                width="15"
+                                height="15"
+                                viewBox="0 0 15 15"
+                                fill="none"
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="h-4 w-4"
+                              >
+                                <path
+                                  d="M4.93179 5.43179C4.75605 5.60753 4.75605 5.89245 4.93179 6.06819C5.10753 6.24392 5.39245 6.24392 5.56819 6.06819L7.49999 4.13638L9.43179 6.06819C9.60753 6.24392 9.89245 6.24392 10.0682 6.06819C10.2439 5.89245 10.2439 5.60753 10.0682 5.43179L7.81819 3.18179C7.73379 3.0974 7.61933 3.04999 7.49999 3.04999C7.38064 3.04999 7.26618 3.0974 7.18179 3.18179L4.93179 5.43179ZM10.0682 9.56819C10.2439 9.39245 10.2439 9.10753 10.0682 8.93179C9.89245 8.75606 9.60753 8.75606 9.43179 8.93179L7.49999 10.8636L5.56819 8.93179C5.39245 8.75606 5.10753 8.75606 4.93179 8.93179C4.75605 9.10753 4.75605 9.39245 4.93179 9.56819L7.18179 11.8182C7.26618 11.9026 7.38064 11.95 7.49999 11.95C7.61933 11.95 7.73379 11.9026 7.81819 11.8182L10.0682 9.56819Z"
+                                  fill="currentColor"
+                                  fillRule="evenodd"
+                                  clipRule="evenodd"
+                                ></path>
+                              </svg>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start">
+                            {seasonNumbers.map((season) => (
+                              <DropdownMenuItem 
+                                key={season}
+                                onClick={() => setActiveTab(season.toString())}
+                                className={activeTab === season.toString() ? "bg-accent" : ""}
+                              >
+                                Season {season}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
+                    </div>
+                    
+                    {seasonNumbers.length > 0 ? (
+                      <div>
+                        {seasonNumbers.map((season) => (
+                          season.toString() === activeTab && (
+                            <div key={season} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                              {episodesBySeason[season].map((episode) => (
+                                <EpisodeCard key={episode.id} episode={episode} isMovie={false} />
+                              ))}
+                            </div>
+                          )
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-muted-foreground">No episodes available.</p>
+                    )}
+                  </div>
                 )}
               </div>
             </>
