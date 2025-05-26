@@ -485,16 +485,62 @@ export async function GET(
       }, { status: 400 });
     }
     
-    // Check if this is a movie by making a test request to movie URL
+    // Improved movie detection logic
     let isMovie = false;
     try {
-      const movieTestResponse = await fetch(`https://animesalt.cc/movie/${id}/`, {
-        method: 'HEAD',
-        cache: 'no-cache'
+      // First, try to fetch the series page to check if it exists and has valid content
+      const seriesResponse = await fetch(`https://animesalt.cc/series/${id}/`, {
+        method: 'GET',
+        cache: 'no-cache',
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
       });
-      isMovie = movieTestResponse.ok;
+      
+      if (seriesResponse.ok) {
+        const seriesHtml = await seriesResponse.text();
+        const seriesCheck = seriesHtml.includes('choose-season') || 
+                           seriesHtml.includes('data-season') ||
+                           seriesHtml.includes('Season') ||
+                           seriesHtml.includes('Episodes');
+        
+        if (seriesCheck) {
+          // This is definitely a series
+          isMovie = false;
+        } else {
+          // Check if movie URL exists and has movie-specific content
+          const movieResponse = await fetch(`https://animesalt.cc/movie/${id}/`, {
+            method: 'GET',
+            cache: 'no-cache',
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+          });
+          
+          if (movieResponse.ok) {
+            const movieHtml = await movieResponse.text();
+            // Check for movie-specific indicators
+            const movieCheck = movieHtml.includes('movie') || 
+                              movieHtml.includes('film') ||
+                              !movieHtml.includes('choose-season');
+            isMovie = movieCheck;
+          } else {
+            isMovie = false;
+          }
+        }
+      } else {
+        // Series URL doesn't work, check movie URL
+        const movieResponse = await fetch(`https://animesalt.cc/movie/${id}/`, {
+          method: 'GET',
+          cache: 'no-cache',
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+          }
+        });
+        isMovie = movieResponse.ok;
+      }
     } catch {
-      // If movie URL fails, assume it's a series
+      // If both fail, assume it's a series
       isMovie = false;
     }
     
