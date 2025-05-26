@@ -40,7 +40,7 @@ export function LoginForm({
     if (authError) {
       setError(authError)
     } else if (user) {
-      router.push("/dashboard") // Redirect to dashboard or home page
+      router.push("dashboard/anime") // Redirect to dashboard or home page
     }
 
     setLoading(false)
@@ -55,7 +55,7 @@ export function LoginForm({
     if (authError) {
       setError(authError)
     } else if (user) {
-      router.push("/dashboard") // Redirect to dashboard or home page
+      router.push("dashboard/anime") // Redirect to dashboard or home page
     }
 
     setGoogleLoading(false)

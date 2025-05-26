@@ -13,7 +13,8 @@ import {
   User,
   Film,
   Search,
-  X
+  X,
+  Video
 } from "lucide-react"
 import {
   Sidebar,
@@ -40,21 +41,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Card, CardContent } from "@/components/ui/card"
 import { signOut } from "@/lib/auth"
 import { ThemeToggle } from "@/components/theme-toggle"
 import Image from "next/image"
 import { Input } from "@/components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 
 // Interface for the API response
-interface AnimePost {
+interface MoviePost {
   imageUrl: string
   title: string
   postUrl: string
@@ -63,20 +56,20 @@ interface AnimePost {
 interface ApiResponse {
   success: boolean
   count: number
-  posts: AnimePost[]
+  posts: MoviePost[]
 }
 
 // Navigation items
 const navItems = [
-  // {
-  //   title: "Dashboard",
-  //   url: "/dashboard",
-  //   icon: Home,
-  // },
   {
     title: "Anime",
     url: "/dashboard/anime",
     icon: Film,
+  },
+  {
+    title: "Movies",
+    url: "/dashboard/movies",
+    icon: Video,
   },
   {
     title: "Analytics",
@@ -87,11 +80,6 @@ const navItems = [
     title: "Users",
     url: "/dashboard/users",
     icon: Users,
-  },
-  {
-    title: "Documents",
-    url: "/dashboard/documents",
-    icon: FileText,
   },
   {
     title: "Settings",
@@ -211,58 +199,24 @@ function UserMenu() {
   )
 }
 
-interface Category {
-  id: string
-  name: string
-  url: string
-}
-
-const categories: Category[] = [
-  { id: "all", name: "All", url: "" },
-  { id: "hindi", name: "Hindi", url: "/category/language/hindi/" },
-  { id: "english", name: "English", url: "/category/language/english/" },
-  { id: "tamil", name: "Tamil", url: "/category/language/tamil/" },
-  { id: "crunchyroll", name: "Crunchyroll", url: "/category/network/crunchyroll/" },
-  { id: "disney", name: "Disney", url: "/category/network/disney/" },
-  // { id: "hotstar", name: "Hotstar", url: "/category/network/hotstar/" },
-]
-
 function Navbar({ 
   searchQuery, 
-  onSearchChange, 
-  selectedCategory, 
-  onCategoryChange 
+  onSearchChange 
 }: { 
   searchQuery: string, 
   onSearchChange: (query: string) => void,
-  selectedCategory: string,
-  onCategoryChange: (category: string) => void
 }) {
   return (
     <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
       <SidebarTrigger className="-ml-1" />
       <div className="flex flex-1 items-center justify-between gap-4">
         <div className="flex items-center gap-4 flex-1">
-          {/* Category Dropdown */}
-          <Select value={selectedCategory} onValueChange={onCategoryChange}>
-            <SelectTrigger className="w-[140px]">
-              <SelectValue placeholder="Category" />
-            </SelectTrigger>
-            <SelectContent>
-              {categories.map((category) => (
-                <SelectItem key={category.id} value={category.id}>
-                  {category.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
           {/* Search Bar */}
           <div className="relative flex-1 max-w-sm md:max-w-md lg:max-w-lg">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               type="text"
-              placeholder="Search anime..."
+              placeholder="Search movies..."
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
               className="pl-10 pr-10 w-full"
@@ -302,7 +256,7 @@ function useDebounce(value: string, delay: number) {
   return debouncedValue
 }
 
-function AnimeGrid({ posts, searchQuery, isSearching }: { posts: AnimePost[], searchQuery: string, isSearching: boolean }) {
+function MoviesGrid({ posts, searchQuery, isSearching }: { posts: MoviePost[], searchQuery: string, isSearching: boolean }) {
   // Filter posts based on search query
   const filteredPosts = posts.filter(post =>
     post.title.toLowerCase().includes(searchQuery.toLowerCase())
@@ -313,7 +267,7 @@ function AnimeGrid({ posts, searchQuery, isSearching }: { posts: AnimePost[], se
       <div className="flex flex-col items-center justify-center h-[50vh] text-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
         <p className="text-lg font-medium mb-2">Searching...</p>
-        <p className="text-muted-foreground">Finding anime for you</p>
+        <p className="text-muted-foreground">Finding movies for you</p>
       </div>
     )
   }
@@ -322,50 +276,36 @@ function AnimeGrid({ posts, searchQuery, isSearching }: { posts: AnimePost[], se
     return (
       <div className="flex flex-col items-center justify-center h-[50vh] text-center">
         <Search className="h-12 w-12 text-muted-foreground mb-4" />
-        <p className="text-lg font-medium mb-2">No anime found</p>
+        <p className="text-lg font-medium mb-2">No movies found</p>
         <p className="text-muted-foreground">Try searching with different keywords</p>
       </div>
     )
   }
 
   return (
-    <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-2 sm:gap-4 md:gap-5 lg:gap-6 mt-6">
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 md:gap-5 lg:gap-6 mt-6">
       {filteredPosts.map((post, index) => {
-        // Detect if this is a movie or series based on URL
-        const isMovie = post.postUrl.includes('/movie/')
-        
         // Extract the ID from the URL for our internal routing
         const urlParts = post.postUrl.split('/');
         // The ID is the second-to-last part in the URL
         const id = urlParts[urlParts.length - 2] || '';
         
-        // Generate the appropriate route based on content type
-        const linkUrl = `/dashboard/anime/${id}`
-        
         return (
           <a 
             key={index}
-            href={linkUrl}
+            href={`/dashboard/movies/${id}`}
             className="transition-transform hover:scale-[1.03] focus:outline-none focus:ring-2 focus:ring-primary rounded-lg overflow-hidden"
           >
             <div className="overflow-hidden flex flex-col">
               <div className="aspect-[2/3] relative rounded-lg overflow-hidden">
                 <Image
-                  src={post.imageUrl}
+                  src={post.imageUrl || '/placeholder-movie.jpg'}
                   alt={post.title}
                   fill
                   className="object-cover"
-                  sizes="(max-width: 640px) 33vw, (max-width: 768px) 33vw, 25vw"
+                  sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 20vw"
                   quality={80}
                 />
-                {/* Add a badge to distinguish movies from series */}
-                {isMovie && (
-                  <div className="absolute top-2 left-2">
-                    <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">
-                      Movie
-                    </span>
-                  </div>
-                )}
               </div>
               <h3 className="text-center font-medium mt-1 sm:mt-2 text-[10px] sm:text-xs md:text-sm line-clamp-1 sm:line-clamp-2">{post.title}</h3>
             </div>
@@ -376,17 +316,16 @@ function AnimeGrid({ posts, searchQuery, isSearching }: { posts: AnimePost[], se
   )
 }
 
-// Update loading skeleton to match the new grid layout
-export default function AnimeDashboard() {
+export default function MoviesDashboard() {
   const { user, loading: authLoading } = useAuth()
   const router = useRouter()
-  const [anime, setAnime] = useState<AnimePost[]>([])
-  const [allAnime, setAllAnime] = useState<AnimePost[]>([]) // Store original data
+  const [movies, setMovies] = useState<MoviePost[]>([])
+  const [allMovies, setAllMovies] = useState<MoviePost[]>([]) // Store original data
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [isSearching, setIsSearching] = useState(false)
-  const [selectedCategory, setSelectedCategory] = useState("all")
+  const [currentPage, setCurrentPage] = useState(1)
   
   // Debounce search query to avoid too many API calls
   const debouncedSearchQuery = useDebounce(searchQuery, 500)
@@ -397,8 +336,7 @@ export default function AnimeDashboard() {
     }
   }, [user, authLoading, router])
 
-  // Update fetchAnime to handle categories
-  const fetchAnime = useCallback(async (category: string = "all", search: string = "") => {
+  const fetchMovies = useCallback(async (page: number = 1, search: string = "") => {
     try {
       setLoading(true)
       
@@ -407,85 +345,80 @@ export default function AnimeDashboard() {
       if (search.trim()) {
         params.append('search', search.trim())
       }
-      if (category !== "all") {
-        params.append('category', category)
+      if (page > 1) {
+        params.append('page', page.toString())
       }
       
       const queryString = params.toString()
-      const url = `/api/posts${queryString ? `?${queryString}` : ''}`
+      const url = `/api/moviesdrive${queryString ? `?${queryString}` : ''}`
       
       const res = await fetch(url)
       const data: ApiResponse = await res.json()
 
       if (data.success) {
-        setAnime(data.posts)
+        setMovies(data.posts)
         if (!search.trim()) {
-          setAllAnime(data.posts) // Only update all anime when not searching
+          setAllMovies(data.posts) // Only update all movies when not searching
         }
       } else {
-        setError("Failed to fetch anime data")
+        setError("Failed to fetch movie data")
       }
     } catch (err) {
-      setError("An error occurred while fetching anime data")
+      setError("An error occurred while fetching movie data")
       console.error(err)
     } finally {
       setLoading(false)
     }
   }, [])
 
-  // Fetch initial anime data
+  // Fetch initial movie data
   useEffect(() => {
     if (user) {
-      fetchAnime(selectedCategory)
+      fetchMovies(currentPage)
     }
-  }, [user, selectedCategory, fetchAnime])
+  }, [user, currentPage, fetchMovies])
 
   // Handle search functionality
   const performSearch = useCallback(async (query: string) => {
     if (!query.trim()) {
-      // If search is empty, fetch category data
-      fetchAnime(selectedCategory)
+      // If search is empty, fetch default data
+      fetchMovies(currentPage)
       setIsSearching(false)
       return
     }
 
     setIsSearching(true)
     try {
-      // Always search via API when there's a query
       const params = new URLSearchParams()
       params.append('search', query.trim())
-      if (selectedCategory !== "all") {
-        params.append('category', selectedCategory)
-      }
       
-      const res = await fetch(`/api/posts?${params.toString()}`)
+      const res = await fetch(`/api/moviesdrive?${params.toString()}`)
       const data: ApiResponse = await res.json()
 
       if (data.success) {
-        setAnime(data.posts)
+        setMovies(data.posts)
       } else {
-        setAnime([])
+        setMovies([])
       }
     } catch (err) {
       console.error("Search error:", err)
-      setAnime([])
+      setMovies([])
     } finally {
       setIsSearching(false)
     }
-  }, [selectedCategory, fetchAnime])
-
-  // Update category change handler
-  const handleCategoryChange = (category: string) => {
-    setSelectedCategory(category)
-    setSearchQuery("") // Clear search when changing category
-  }
+  }, [currentPage, fetchMovies])
 
   // Effect for debounced search
   useEffect(() => {
-    if (allAnime.length > 0) { // Only search if we have loaded initial data
+    if (allMovies.length > 0) { // Only search if we have loaded initial data
       performSearch(debouncedSearchQuery)
     }
-  }, [debouncedSearchQuery, performSearch, allAnime.length])
+  }, [debouncedSearchQuery, performSearch, allMovies.length])
+
+  // Function to load more movies
+  const loadMore = () => {
+    setCurrentPage(prev => prev + 1)
+  }
 
   if (authLoading) {
     return (
@@ -506,13 +439,15 @@ export default function AnimeDashboard() {
         <Navbar 
           searchQuery={searchQuery} 
           onSearchChange={setSearchQuery}
-          selectedCategory={selectedCategory}
-          onCategoryChange={handleCategoryChange}
         />
-        <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-          {loading ? (
-            <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-2 sm:gap-4 md:gap-5 lg:gap-6 mt-6">
-              {Array(12).fill(0).map((_, i) => (
+        <div className="flex flex-1 flex-col gap-4 p-4 pt-0 overflow-y-auto">
+          <div className="flex justify-between items-center mt-2">
+            <h1 className="text-2xl font-bold">Movies & TV Shows</h1>
+          </div>
+          
+          {loading && movies.length === 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 md:gap-5 lg:gap-6 mt-6">
+              {Array(10).fill(0).map((_, i) => (
                 <div key={i} className="flex flex-col">
                   <div className="aspect-[2/3] bg-muted animate-pulse rounded-lg" />
                   <div className="h-2 sm:h-3 md:h-4 bg-muted animate-pulse rounded w-3/4 mt-1 sm:mt-2 mx-auto" />
@@ -525,7 +460,27 @@ export default function AnimeDashboard() {
               <Button onClick={() => window.location.reload()}>Retry</Button>
             </div>
           ) : (
-            <AnimeGrid posts={anime} searchQuery={searchQuery} isSearching={isSearching} />
+            <>
+              <MoviesGrid posts={movies} searchQuery={searchQuery} isSearching={isSearching} />
+              
+              {!searchQuery && !isSearching && (
+                <div className="flex justify-center mt-8 mb-6">
+                  <Button 
+                    onClick={loadMore}
+                    disabled={loading}
+                    variant="outline"
+                    className="min-w-[200px]"
+                  >
+                    {loading ? (
+                      <>
+                        <span className="animate-spin mr-2">⟳</span>
+                        Loading...
+                      </>
+                    ) : "Load More"}
+                  </Button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </SidebarInset>
