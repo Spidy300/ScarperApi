@@ -15,6 +15,7 @@ import {
   Video,
   Menu,
   X,
+  Key,
 } from "lucide-react"
 import {
   Sidebar,
@@ -76,6 +77,11 @@ const navItems = [
     title: "Settings",
     url: "/dashboard/settings",
     icon: Settings,
+  },
+  {
+    title: "API Keys",
+    url: "/dashboard/api-keys",
+    icon: Key,
   },
 ]
 
