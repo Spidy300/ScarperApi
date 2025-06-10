@@ -1,17 +1,5 @@
 import { NextResponse } from 'next/server'
 
-interface StreamLink {
-  server: string;
-  link: string;
-  type: string;
-}
-
-interface StreamResponse {
-  links: StreamLink[];
-  success: boolean;
-  count: number;
-}
-
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
@@ -35,8 +23,7 @@ export async function GET(request: Request) {
       throw new Error(`API request failed: ${response.status}`)
     }
 
-    const data: StreamResponse = await response.json()
-
+    const data = await response.json()
     return NextResponse.json(data)
   } catch (error) {
     console.error('Error fetching stream links:', error)

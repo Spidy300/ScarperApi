@@ -102,7 +102,7 @@ export async function GET(request: Request) {
     }
 
     // Make sure the URL is from moviesdrive.solutions
-    if (!url.includes('moviesdrive.solutions')) {
+    if (!url.includes('moviesdrive.design')) {
       return NextResponse.json({
         success: false,
         error: 'Only MoviesDrive URLs are supported'

@@ -61,7 +61,6 @@ import {
 } from "@/components/ui/dialog"
 import { toast } from "sonner"
 import Image from "next/image"
-import { VideoPlayer } from "@/components/video-player"
 
 // Navigation items 
 const navItems = [
@@ -272,8 +271,6 @@ export default function MovieDetailPage({ params }: { params: { id: string } }) 
   const [selectedEpisode, setSelectedEpisode] = useState<Episode | null>(null)
   const [streamLinks, setStreamLinks] = useState<StreamLink[]>([])
   const [fetchingStreams, setFetchingStreams] = useState(false)
-  const [currentVideoUrl, setCurrentVideoUrl] = useState<string | null>(null)
-  const [showPlayer, setShowPlayer] = useState(false)
 
   // Unwrap the params object using React.use()
   const unwrappedParams = use(params);
@@ -312,7 +309,7 @@ export default function MovieDetailPage({ params }: { params: { id: string } }) 
       try {
         setLoading(true)
         // Get the full URL for this movie
-        const fullUrl = `https://moviesdrive.solutions/${id}/`
+        const fullUrl = `https://moviesdrive.design/${id}/`
         
         // Fetch movie details using our API
         const res = await fetch(`/api/moviesdrive/episode?url=${encodeURIComponent(fullUrl)}`)
@@ -399,16 +396,13 @@ export default function MovieDetailPage({ params }: { params: { id: string } }) 
   }
 
   const handleStreamLinkClick = (link: StreamLink) => {
-    setCurrentVideoUrl(link.link)
-    toast.success(`Now playing from ${link.server}`)
+    window.open(link.link, '_blank')
+    toast.success(`Opening ${link.server} in new tab`)
   }
 
   const handleQualityClick = (quality: {url: string, quality: string}) => {
     setSelectedQuality(quality)
     setEpisodes([])
-    setShowPlayer(false)
-    setCurrentVideoUrl(null)
-    setStreamLinks([])
     fetchEpisodes(quality.url)
   }
 
@@ -444,50 +438,6 @@ export default function MovieDetailPage({ params }: { params: { id: string } }) 
             </div>
           ) : movieDetails ? (
             <>
-              {/* Video Player Section */}
-              {showPlayer && currentVideoUrl && selectedEpisode && (
-                <div className="mb-6">
-                  <div className="bg-card rounded-lg p-4 mb-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-lg font-semibold">
-                        Now Playing: {extractEpisodeNumber(selectedEpisode.title)}
-                      </h3>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowPlayer(false)}
-                      >
-                        Close Player
-                      </Button>
-                    </div>
-                    {streamLinks.length > 1 && (
-                      <div className="flex flex-wrap gap-2 mb-4">
-                        <span className="text-sm text-muted-foreground mr-2">Servers:</span>
-                        {streamLinks.map((link, idx) => (
-                          <Button
-                            key={idx}
-                            variant={currentVideoUrl === link.link ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => handleStreamLinkClick(link)}
-                            className="text-xs"
-                          >
-                            {link.server}
-                          </Button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="rounded-lg overflow-hidden bg-black">
-                    <VideoPlayer
-                      src={currentVideoUrl}
-                      poster={movieDetails.mainImage}
-                      className="aspect-video w-full"
-                    />
-                  </div>
-                </div>
-              )}
-
               {/* Movie Header Section */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 {/* Movie Poster */}
@@ -612,7 +562,7 @@ export default function MovieDetailPage({ params }: { params: { id: string } }) 
                   )}
 
                   {/* Stream Links Display */}
-                  {streamLinks.length > 0 && selectedEpisode && !showPlayer && (
+                  {streamLinks.length > 0 && selectedEpisode && (
                     <div className="mt-6">
                       <h3 className="text-lg font-semibold mb-3">Available Streams</h3>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -626,13 +576,10 @@ export default function MovieDetailPage({ params }: { params: { id: string } }) 
                               <div className="flex gap-2">
                                 <Button
                                   size="sm"
-                                  onClick={() => {
-                                    setCurrentVideoUrl(link.link)
-                                    setShowPlayer(true)
-                                  }}
+                                  onClick={() => handleStreamLinkClick(link)}
                                 >
-                                  <Play className="h-3 w-3 mr-1" />
-                                  Play
+                                  <ExternalLink className="h-3 w-3 mr-1" />
+                                  Open
                                 </Button>
                                 <Button
                                   variant="outline"

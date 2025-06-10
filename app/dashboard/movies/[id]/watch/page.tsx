@@ -3,8 +3,7 @@
 import { useAuth } from "@/contexts/auth-context"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useEffect, useState } from "react"
-import { VideoPlayer } from "@/components/video-player"
-import { ArrowLeft, Loader2 } from "lucide-react"
+import { ArrowLeft, Loader2, ExternalLink } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface StreamLink {
@@ -77,6 +76,12 @@ export default function WatchMoviePage() {
     router.back()
   }
 
+  const openInNewTab = () => {
+    if (currentVideoUrl) {
+      window.open(currentVideoUrl, '_blank')
+    }
+  }
+
   if (authLoading || loading) {
     return (
       <div className="flex min-h-svh items-center justify-center bg-black">
@@ -93,25 +98,30 @@ export default function WatchMoviePage() {
   }
 
   return (
-    <div className="flex flex-col min-h-svh bg-black">
-      {/* Minimal Header */}
-      <div className="absolute top-4 left-4 z-50">
-        <Button variant="ghost" size="icon" onClick={goBack} className="bg-black/50 text-white hover:bg-black/70">
+    <div className="flex flex-col min-h-svh bg-background">
+      {/* Header */}
+      <div className="flex items-center justify-between p-4 border-b">
+        <Button variant="ghost" size="icon" onClick={goBack}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
+        <h1 className="text-lg font-semibold">{movieTitle || "Watch Movie"}</h1>
+        <div />
       </div>
 
-      {/* Full Screen Video Player */}
-      <div className="flex-1 flex items-center justify-center">
+      {/* Content */}
+      <div className="flex-1 flex items-center justify-center p-4">
         {currentVideoUrl ? (
-          <VideoPlayer
-            src={currentVideoUrl}
-            className="w-full h-full"
-            autoplay={true}
-          />
+          <div className="text-center space-y-4">
+            <h2 className="text-xl font-semibold">Video Ready</h2>
+            <p className="text-muted-foreground">Click below to watch the video in a new tab</p>
+            <Button onClick={openInNewTab} className="flex items-center gap-2">
+              <ExternalLink className="h-4 w-4" />
+              Open Video
+            </Button>
+          </div>
         ) : (
-          <div className="text-white text-center">
-            <p>No video available</p>
+          <div className="text-center">
+            <p className="text-muted-foreground">No video available</p>
           </div>
         )}
       </div>
