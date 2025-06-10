@@ -2,7 +2,7 @@
 
 import { useAuth } from "@/contexts/auth-context"
 import { useRouter, usePathname } from "next/navigation"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import {
   Home,
   Settings,
@@ -13,6 +13,8 @@ import {
   User,
   Film,
   Video,
+  Menu,
+  X,
 } from "lucide-react"
 import {
   Sidebar,
@@ -191,12 +193,23 @@ function UserMenu() {
 interface DashboardNavbarProps {
   title?: string
   children?: React.ReactNode
+  onToggleSidebar?: () => void
+  isSidebarOpen?: boolean
 }
 
-export function DashboardNavbar({ title, children }: DashboardNavbarProps) {
+export function DashboardNavbar({ title, children, onToggleSidebar, isSidebarOpen }: DashboardNavbarProps) {
   return (
     <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4 sticky top-0 bg-background z-10">
       <SidebarTrigger className="-ml-1" />
+      {/* Mobile hamburger menu */}
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={onToggleSidebar}
+        className="md:hidden"
+      >
+        {isSidebarOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+      </Button>
       <div className="flex flex-1 items-center justify-between">
         {title ? (
           <h1 className="text-lg font-semibold">{title}</h1>
@@ -218,6 +231,7 @@ export default function DashboardLayout({
 }) {
   const { user, loading } = useAuth()
   const router = useRouter()
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
 
   useEffect(() => {
     if (!loading && !user) {
@@ -237,9 +251,49 @@ export default function DashboardLayout({
     return null
   }
 
+  const toggleMobileSidebar = () => {
+    setIsMobileSidebarOpen(!isMobileSidebarOpen)
+  }
+
   return (
     <SidebarProvider>
       <AppSidebar />
+      
+      {/* Mobile sidebar overlay */}
+      {isMobileSidebarOpen && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          <div 
+            className="fixed inset-0 bg-black/20" 
+            onClick={() => setIsMobileSidebarOpen(false)}
+          />
+          <div className="fixed left-0 top-0 h-full w-64 bg-background border-r shadow-lg">
+            <div className="p-4">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsMobileSidebarOpen(false)}
+                className="mb-4"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+              <div className="space-y-2">
+                {navItems.map((item) => (
+                  <a
+                    key={item.title}
+                    href={item.url}
+                    className="flex items-center gap-2 p-2 hover:bg-accent rounded"
+                    onClick={() => setIsMobileSidebarOpen(false)}
+                  >
+                    <item.icon className="h-4 w-4" />
+                    {item.title}
+                  </a>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <SidebarInset className="flex flex-col">
         {children}
       </SidebarInset>

@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { signInWithEmail, signInWithGoogle } from "@/lib/auth"
+import { useAuth } from "@/contexts/auth-context"
 import { Loader2 } from "lucide-react"
 
 interface LoginFormProps extends React.HTMLAttributes<HTMLDivElement> {}
@@ -29,6 +30,33 @@ export function LoginForm({
   const [googleLoading, setGoogleLoading] = useState(false)
   const [error, setError] = useState("")
   const router = useRouter()
+  const { user, loading: authLoading } = useAuth()
+
+  // Check if user is already logged in
+  useEffect(() => {
+    if (!authLoading && user) {
+      router.push("/dashboard/anime")
+    }
+  }, [user, authLoading, router])
+
+  // Show loading state while checking authentication
+  if (authLoading) {
+    return (
+      <div className={cn("flex flex-col gap-6", className)} {...props}>
+        <Card>
+          <CardContent className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin" />
+            <span className="ml-2">Checking authentication...</span>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // Don't render the form if user is already logged in
+  if (user) {
+    return null
+  }
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -40,7 +68,7 @@ export function LoginForm({
     if (authError) {
       setError(authError)
     } else if (user) {
-      router.push("dashboard/anime") // Redirect to dashboard or home page
+      router.push("/dashboard/anime") // Redirect to dashboard or home page
     }
 
     setLoading(false)
@@ -55,7 +83,7 @@ export function LoginForm({
     if (authError) {
       setError(authError)
     } else if (user) {
-      router.push("dashboard/anime") // Redirect to dashboard or home page
+      router.push("/dashboard/anime") // Redirect to dashboard or home page
     }
 
     setGoogleLoading(false)

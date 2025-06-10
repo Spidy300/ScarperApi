@@ -11,6 +11,20 @@ import { toast } from 'sonner'
 export const signInWithEmail = async (email: string, password: string) => {
   try {
     const result = await signInWithEmailAndPassword(auth, email, password)
+    
+    // Call API to store/update user in database
+    await fetch('/api/auth/sync-user', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        uid: result.user.uid,
+        email: result.user.email,
+        displayName: result.user.displayName,
+        photoURL: result.user.photoURL,
+        provider: 'email'
+      })
+    })
+    
     toast.success("Login successful!", {
       description: "Welcome back!",
       position: "top-right"
@@ -28,6 +42,20 @@ export const signInWithEmail = async (email: string, password: string) => {
 export const signInWithGoogle = async () => {
   try {
     const result = await signInWithPopup(auth, googleProvider)
+    
+    // Call API to store/update user in database
+    await fetch('/api/auth/sync-user', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        uid: result.user.uid,
+        email: result.user.email,
+        displayName: result.user.displayName,
+        photoURL: result.user.photoURL,
+        provider: 'google'
+      })
+    })
+    
     toast.success("Login successful!", {
       description: "Welcome back!",
       position: "top-right"
@@ -45,6 +73,20 @@ export const signInWithGoogle = async () => {
 export const signUpWithEmail = async (email: string, password: string) => {
   try {
     const result = await createUserWithEmailAndPassword(auth, email, password)
+    
+    // Call API to store user in database
+    await fetch('/api/auth/sync-user', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        uid: result.user.uid,
+        email: result.user.email,
+        displayName: result.user.displayName,
+        photoURL: result.user.photoURL,
+        provider: 'email'
+      })
+    })
+    
     toast.success("Account created successfully!", {
       description: "Welcome! Please verify your email.",
       position: "top-right"
