@@ -264,6 +264,15 @@ export default function DesireMovieDetailPage({ params }: { params: { id: string
     }
   }
 
+  const handleDirectDownload = (url: string) => {
+    // Open the Google Drive download link in the same tab
+    window.location.href = url
+  }
+
+  const isGoogleDriveDirectLink = (url: string) => {
+    return url.includes('video-downloads.googleusercontent.com')
+  }
+
   const goBack = () => {
     router.back()
   }
@@ -506,18 +515,29 @@ export default function DesireMovieDetailPage({ params }: { params: { id: string
                               readOnly
                               className="flex-1 text-xs"
                             />
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              onClick={() => copyToClipboard(link.url, index)}
-                              className="shrink-0"
-                            >
-                              {copiedIndex === index ? (
-                                <Check className="h-4 w-4 text-green-500" />
-                              ) : (
-                                <Copy className="h-4 w-4" />
-                              )}
-                            </Button>
+                            {isGoogleDriveDirectLink(link.url) ? (
+                              <Button
+                                variant="default"
+                                size="icon"
+                                onClick={() => handleDirectDownload(link.url)}
+                                className="shrink-0"
+                              >
+                                <Download className="h-4 w-4" />
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => copyToClipboard(link.url, index)}
+                                className="shrink-0"
+                              >
+                                {copiedIndex === index ? (
+                                  <Check className="h-4 w-4 text-green-500" />
+                                ) : (
+                                  <Copy className="h-4 w-4" />
+                                )}
+                              </Button>
+                            )}
                           </div>
                         </div>
                       ))}

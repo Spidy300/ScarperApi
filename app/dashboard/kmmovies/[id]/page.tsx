@@ -150,7 +150,7 @@ export default function KMMovieDetailPage({ params }: { params: { id: string } }
     }
   }, [user, id, userApiKey])
 
-  const fetchMagicLinks = async (downloadUrl: string) => {
+  const fetchAllProviderLinks = async (downloadUrl: string) => {
     if (!userApiKey) {
       toast.error("API key required. Please create an API key in the API Keys section.")
       return
@@ -158,25 +158,78 @@ export default function KMMovieDetailPage({ params }: { params: { id: string } }
     
     setFetchingMagicLinks(true)
     try {
-      const res = await fetch(`/api/kmmovies/magic-links?url=${encodeURIComponent(downloadUrl)}`, {
+      // First fetch the magic links
+      const magicRes = await fetch(`/api/kmmovies/magic-links?url=${encodeURIComponent(downloadUrl)}`, {
         headers: {
           'x-api-key': userApiKey
         }
       })
-      const data = await res.json()
+      const magicData = await magicRes.json()
       
-      if (data.success && data.data.links) {
-        // Filter out GDTOT links and keep only GDFLIX, Watch Online, and HUBCLOUD
-        const filteredLinks = data.data.links.filter((link: any) => 
+      if (magicData.success && magicData.data.links) {
+        const allLinks = []
+        
+        // Filter out GDTOT links and process each provider link
+        const filteredLinks = magicData.data.links.filter((link: any) => 
           link.provider !== 'GDTOT'
         )
-        setMagicLinks(filteredLinks)
+        
+        for (const link of filteredLinks) {
+          if (link.type === 'hubcloud') {
+            // Fetch HubCloud stream URLs immediately
+            try {
+              const hubRes = await fetch(`/api/hubcloud?url=${encodeURIComponent(link.url)}`, {
+                headers: {
+                  'x-api-key': userApiKey
+                }
+              })
+              const hubData = await hubRes.json()
+              
+              if (hubData.success && hubData.links && hubData.links.length > 0) {
+                // Add each stream URL as a separate entry
+                hubData.links.forEach((streamLink: any) => {
+                  allLinks.push({
+                    ...link,
+                    url: streamLink.link,
+                    displayName: `${link.provider} - ${streamLink.server}`,
+                    streamServer: streamLink.server,
+                    isStreamUrl: true,
+                    originalProvider: link.provider
+                  })
+                })
+              } else {
+                // If HubCloud fetch fails, still show the original link
+                allLinks.push({
+                  ...link,
+                  displayName: `${link.provider} (Failed to load streams)`,
+                  isStreamUrl: false
+                })
+              }
+            } catch (error) {
+              console.error("Error fetching HubCloud streams:", error)
+              allLinks.push({
+                ...link,
+                displayName: `${link.provider} (Error loading streams)`,
+                isStreamUrl: false
+              })
+            }
+          } else {
+            // For non-HubCloud providers, add as-is
+            allLinks.push({
+              ...link,
+              displayName: link.provider,
+              isStreamUrl: false
+            })
+          }
+        }
+        
+        setMagicLinks(allLinks)
       } else {
         toast.error("Failed to fetch download links")
         setMagicLinks([])
       }
     } catch (error) {
-      console.error("Error fetching magic links:", error)
+      console.error("Error fetching download links:", error)
       toast.error("Failed to fetch download links")
       setMagicLinks([])
     } finally {
@@ -189,7 +242,7 @@ export default function KMMovieDetailPage({ params }: { params: { id: string } }
     setDialogOpen(true)
     setMagicLinks([])
     setCopiedIndex(null)
-    fetchMagicLinks(link.url)
+    fetchAllProviderLinks(link.url)
   }
 
   const handleStreamClick = (streamUrl: string) => {
@@ -241,6 +294,15 @@ export default function KMMovieDetailPage({ params }: { params: { id: string } }
     } catch (error) {
       toast.error("Failed to copy URL")
     }
+  }
+
+  const handleDirectDownload = (url: string) => {
+    // Open the Google Drive download link in the same tab
+    window.location.href = url
+  }
+
+  const isGoogleDriveDirectLink = (url: string) => {
+    return url.includes('video-downloads.googleusercontent.com')
   }
 
   const goBack = () => {
@@ -416,130 +478,70 @@ export default function KMMovieDetailPage({ params }: { params: { id: string } }
 
             {/* Download Links Dialog */}
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-              <DialogContent className="sm:max-w-lg">
+              <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>{selectedLink?.quality} Download</DialogTitle>
+                  <DialogDescription>
+                    Available download providers and stream links
+                  </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
                   {fetchingMagicLinks ? (
                     <div className="flex items-center justify-center py-8">
                       <div className="flex flex-col items-center gap-2">
                         <Loader2 className="h-8 w-8 animate-spin" />
-                        <p className="text-sm text-muted-foreground">Fetching download links...</p>
+                        <p className="text-sm text-muted-foreground">Fetching all provider links...</p>
                       </div>
                     </div>
                   ) : magicLinks.length > 0 ? (
                     <div className="space-y-3">
-                      <label className="text-sm font-medium">Available Options</label>
+                      <label className="text-sm font-medium">Available Providers & Stream Links</label>
                       {magicLinks.map((link, index) => (
                         <div key={index} className="space-y-2">
                           <div className="flex items-center justify-between">
                             <span className="text-sm font-medium text-muted-foreground">
-                              {link.provider} ({link.type.toUpperCase()})
+                              {link.displayName} {link.isStreamUrl ? '(Stream)' : `(${link.type?.toUpperCase() || 'Download'})`}
                             </span>
                           </div>
                           <div className="flex gap-2">
-                            {link.type === 'hubcloud' ? (
+                            <Input
+                              value={link.url}
+                              readOnly
+                              className="flex-1 text-xs"
+                            />
+                            {isGoogleDriveDirectLink(link.url) ? (
                               <Button
-                                variant="outline"
-                                className="flex-1 text-xs"
-                                onClick={() => handleHubcloudClick(link.url)}
+                                variant="default"
+                                size="icon"
+                                onClick={() => handleDirectDownload(link.url)}
+                                className="shrink-0"
                               >
-                                <Play className="h-3 w-3 mr-1" />
-                                Get Stream Links
+                                <Download className="h-4 w-4" />
                               </Button>
                             ) : (
-                              <>
-                                <Input
-                                  value={link.url}
-                                  readOnly
-                                  className="flex-1 text-xs"
-                                />
-                                <Button
-                                  variant="outline"
-                                  size="icon"
-                                  onClick={() => copyToClipboard(link.url, index)}
-                                  className="shrink-0"
-                                >
-                                  {copiedIndex === index ? (
-                                    <Check className="h-4 w-4 text-green-500" />
-                                  ) : (
-                                    <Copy className="h-4 w-4" />
-                                  )}
-                                </Button>
-                              </>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => copyToClipboard(link.url, index)}
+                                className="shrink-0"
+                              >
+                                {copiedIndex === index ? (
+                                  <Check className="h-4 w-4 text-green-500" />
+                                ) : (
+                                  <Copy className="h-4 w-4" />
+                                )}
+                              </Button>
                             )}
                           </div>
                         </div>
                       ))}
                       <div className="pt-2 text-xs text-muted-foreground">
-                        {magicLinks.some(link => link.type === 'stream') ? 
-                          'Use stream links to watch online or download links for offline viewing' :
-                          'Use these links to download the movie files'
-                        }
+                        Stream links can be opened in VLC or your preferred media player. Download links can be used for file downloads.
                       </div>
                     </div>
                   ) : (
                     <div className="text-center py-8">
                       <p className="text-muted-foreground">No download links available</p>
-                    </div>
-                  )}
-                </div>
-              </DialogContent>
-            </Dialog>
-
-            {/* HubCloud Stream Dialog */}
-            <Dialog open={hubcloudDialogOpen} onOpenChange={setHubcloudDialogOpen}>
-              <DialogContent className="sm:max-w-lg">
-                <DialogHeader>
-                  <DialogTitle>HubCloud Stream Links</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  {fetchingHubcloud ? (
-                    <div className="flex items-center justify-center py-8">
-                      <div className="flex flex-col items-center gap-2">
-                        <Loader2 className="h-8 w-8 animate-spin" />
-                        <p className="text-sm text-muted-foreground">Fetching stream links...</p>
-                      </div>
-                    </div>
-                  ) : hubcloudStreamUrls.length > 0 ? (
-                    <div className="space-y-3">
-                      <label className="text-sm font-medium">Available Servers</label>
-                      {hubcloudStreamUrls.map((link, index) => (
-                        <div key={index} className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium text-muted-foreground">
-                              {link.server} ({link.type?.toUpperCase() || 'STREAM'})
-                            </span>
-                          </div>
-                          <div className="flex gap-2">
-                            <Input
-                              value={link.link}
-                              readOnly
-                              className="flex-1 text-xs"
-                            />
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              onClick={() => copyToClipboard(link.link, index)}
-                              className="shrink-0"
-                            >
-                              {copiedIndex === index ? (
-                                <Check className="h-4 w-4 text-green-500" />
-                              ) : (
-                                <Copy className="h-4 w-4" />
-                              )}
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                      <div className="pt-2 text-xs text-muted-foreground">
-                        Copy the URL and open it in VLC or your preferred media player
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <p className="text-muted-foreground">No stream links available</p>
                     </div>
                   )}
                 </div>
