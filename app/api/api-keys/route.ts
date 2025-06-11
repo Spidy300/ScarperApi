@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { ApiKeyService } from '@/lib/services/api-key-service';
 import { UserService } from '@/lib/services/user-service';
 import { nanoid } from 'nanoid';
+import { db } from '@/lib/db';
+import { apiKeysTable } from '@/lib/db/schema';
 
 export async function GET(request: Request) {
   try {
