@@ -263,6 +263,11 @@ export default function MoviesPage() {
 
   // Handle search functionality
   const performSearch = useCallback(async (query: string) => {
+    if (!userApiKey) {
+      setError('API key not available. Please create an API key first.');
+      return;
+    }
+
     if (!query.trim()) {
       // If search is empty, fetch default data
       fetchMovies(currentPage)
@@ -277,7 +282,7 @@ export default function MoviesPage() {
       
       const res = await fetch(`/api/moviesdrive?${params.toString()}`, {
         headers: {
-          'x-api-key': process.env.NEXT_PUBLIC_TOTU_API_KEY !
+          'x-api-key': userApiKey // Use user's API key instead of environment variable
         }
       })
       const data: ApiResponse = await res.json()
@@ -297,14 +302,14 @@ export default function MoviesPage() {
     } finally {
       setIsSearching(false)
     }
-  }, [currentPage, fetchMovies])
+  }, [currentPage, fetchMovies, userApiKey])
 
-  // Effect for debounced search
+  // Effect for debounced search - only trigger when userApiKey is available
   useEffect(() => {
-    if (allMovies.length > 0) { // Only search if we have loaded initial data
+    if (allMovies.length > 0 && userApiKey) { // Added userApiKey check
       performSearch(debouncedSearchQuery)
     }
-  }, [debouncedSearchQuery, performSearch, allMovies.length])
+  }, [debouncedSearchQuery, performSearch, allMovies.length, userApiKey])
 
   // Function to load more movies
   const loadMore = () => {

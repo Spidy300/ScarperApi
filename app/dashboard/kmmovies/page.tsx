@@ -82,34 +82,29 @@ function useDebounce(value: string, delay: number) {
 }
 
 function MoviesGrid({ posts, searchQuery, isSearching }: { posts: KMMoviePost[], searchQuery: string, isSearching: boolean }) {
-  // Filter posts based on search query
-  const filteredPosts = posts.filter(post =>
-    post.title.toLowerCase().includes(searchQuery.toLowerCase())
-  )
-
   if (isSearching) {
     return (
       <div className="flex flex-col items-center justify-center h-[50vh] text-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
         <p className="text-lg font-medium mb-2">Searching...</p>
-        <p className="text-muted-foreground">Finding movies for you</p>
+        <p className="text-muted-foreground">Finding movies for "{searchQuery}"</p>
       </div>
     )
   }
 
-  if (searchQuery && filteredPosts.length === 0) {
+  if (searchQuery && posts.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-[50vh] text-center">
         <Search className="h-12 w-12 text-muted-foreground mb-4" />
         <p className="text-lg font-medium mb-2">No movies found</p>
-        <p className="text-muted-foreground">Try searching with different keywords</p>
+        <p className="text-muted-foreground">No results for "{searchQuery}". Try different keywords.</p>
       </div>
     )
   }
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 md:gap-5 lg:gap-6 mt-6">
-      {filteredPosts.map((post, index) => {
+      {posts.map((post, index) => {
         // Extract the ID from the URL for our internal routing
         const urlParts = post.postUrl.split('/');
         const id = urlParts[urlParts.length - 2] || post.id;
@@ -216,7 +211,7 @@ export default function KMMoviesDashboard() {
       
       const res = await fetch(url, {
         headers: {
-          'x-api-key': userApiKey // Use user's API key from database
+          'x-api-key': userApiKey // userApiKey is guaranteed to be non-null here
         }
       })
       const data: ApiResponse = await res.json()
@@ -241,15 +236,20 @@ export default function KMMoviesDashboard() {
     }
   }, [userApiKey])
 
-  // Fetch initial movie data
+  // Fetch initial movie data when userApiKey is available
   useEffect(() => {
-    if (user) {
+    if (user && userApiKey) {
       fetchMovies(currentPage)
     }
-  }, [user, currentPage, fetchMovies])
+  }, [user, currentPage, fetchMovies, userApiKey])
 
   // Handle search functionality
   const performSearch = useCallback(async (query: string) => {
+    if (!userApiKey) {
+      setError('API key not available. Please create an API key first.');
+      return;
+    }
+
     if (!query.trim()) {
       fetchMovies(currentPage)
       setIsSearching(false)
@@ -257,45 +257,53 @@ export default function KMMoviesDashboard() {
     }
 
     setIsSearching(true)
+    setError('') // Clear any previous errors
     try {
       const params = new URLSearchParams()
       params.append('search', query.trim())
       
       const res = await fetch(`/api/kmmovies?${params.toString()}`, {
         headers: {
-          'x-api-key': userApiKey // Use user's API key from database
+          'x-api-key': userApiKey
         }
       })
       const data: ApiResponse = await res.json()
 
+      console.log('Search response:', data) // Debug log
+
       if (data.success) {
         setMovies(data.posts)
+        // Don't update allMovies during search to preserve original data
       } else {
         if (res.status === 401) {
           setError("API key required. Please create an API key in the API Keys section.")
         } else {
-          setMovies([])
+          console.error('Search failed:', data.error)
+          setMovies([]) // Clear movies on search failure
         }
       }
     } catch (err) {
       console.error("Search error:", err)
+      setError("Failed to search movies")
       setMovies([])
     } finally {
       setIsSearching(false)
     }
   }, [currentPage, fetchMovies, userApiKey])
 
-  // Effect for debounced search
+  // Effect for debounced search - only trigger when userApiKey is available
   useEffect(() => {
-    if (allMovies.length > 0) {
+    if (allMovies.length > 0 && userApiKey) {
       performSearch(debouncedSearchQuery)
     }
-  }, [debouncedSearchQuery, performSearch, allMovies.length])
+  }, [debouncedSearchQuery, performSearch, allMovies.length, userApiKey])
 
-  // Function to load more movies
-  const loadMore = () => {
-    setCurrentPage(prev => prev + 1)
-  }
+  // Fetch user's API key when component mounts
+  useEffect(() => {
+    if (user) {
+      fetchUserApiKey();
+    }
+  }, [user]);
 
   if (authLoading) {
     return (
@@ -334,6 +342,45 @@ export default function KMMoviesDashboard() {
       </div>
     );
   }
+
+    const loadMore = async () => {
+        if (loading || !userApiKey) return;
+        
+        const nextPage = currentPage + 1;
+        setCurrentPage(nextPage);
+        
+        try {
+            setLoading(true);
+            
+            const params = new URLSearchParams();
+            params.append('page', nextPage.toString());
+            
+            const res = await fetch(`/api/kmmovies?${params.toString()}`, {
+                headers: {
+                    'x-api-key': userApiKey
+                }
+            });
+            
+            const data: ApiResponse = await res.json();
+            
+            if (data.success) {
+                // Append new movies to existing ones
+                setMovies(prevMovies => [...prevMovies, ...data.posts]);
+                setAllMovies(prevMovies => [...prevMovies, ...data.posts]);
+            } else {
+                if (res.status === 401) {
+                    setError("API key required. Please create an API key in the API Keys section.");
+                } else {
+                    setError("Failed to load more movies");
+                }
+            }
+        } catch (err) {
+            setError("An error occurred while loading more movies");
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
+    };
 
   return (
     <div className="flex flex-col min-h-screen">
