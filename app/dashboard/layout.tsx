@@ -16,6 +16,11 @@ import {
   Menu,
   X,
   Key,
+  Tv,
+  Camera,
+  MonitorPlay,
+  Clapperboard,
+  HardDrive,
 } from "lucide-react"
 import {
   Sidebar,
@@ -53,22 +58,27 @@ const navItems = [
   {
     title: "Anime",
     url: "/dashboard/anime",
-    icon: Film,
+    icon: Tv,
   },
   {
     title: "Movies",
     url: "/dashboard/movies",
-    icon: Video,
+    icon: Film,
   },
   {
     title: "KM Movies",
     url: "/dashboard/kmmovies",
-    icon: Video,
+    icon: Camera,
   },
   {
     title: "DesireMovies",
     url: "/dashboard/desiremovies",
-    icon: Video,
+    icon: Clapperboard,
+  },
+  {
+    title: "10 Bit",
+    url: "/dashboard/10bitclub",
+    icon: HardDrive,
   },
   {
     title: "API Keys",
