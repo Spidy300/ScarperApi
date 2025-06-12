@@ -52,6 +52,7 @@ import { ThemeToggle } from "@/components/theme-toggle"
 import { Loader } from "@/components/ui/loader"
 import { Toaster } from "@/components/ui/sonner"
 import { GlobalSearch } from "@/components/global-search"
+import { title } from "process"
 
 // Navigation items 
 const navItems = [
@@ -79,6 +80,11 @@ const navItems = [
     title: "10 Bit",
     url: "/dashboard/10bitclub",
     icon: HardDrive,
+  },
+  {
+   title: "VegaMovies",
+   url: "/dashboard/vegamovies",
+   icon: MonitorPlay,
   },
   {
     title: "API Keys",

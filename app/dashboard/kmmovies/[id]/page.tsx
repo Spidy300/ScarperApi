@@ -9,7 +9,6 @@ import {
   Loader2,
   Copy,
   Check,
-  Play,
   Download,
   ArrowLeft
 } from "lucide-react"
@@ -70,8 +69,6 @@ export default function KMMovieDetailPage({ params }: { params: { id: string } }
   const [magicLinks, setMagicLinks] = useState<any[]>([])
   const [fetchingMagicLinks, setFetchingMagicLinks] = useState(false)
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
-  const [streamDialogOpen, setStreamDialogOpen] = useState(false)
-  const [selectedStreamUrl, setSelectedStreamUrl] = useState<string>('')
   const [hubcloudDialogOpen, setHubcloudDialogOpen] = useState(false)
   const [hubcloudStreamUrls, setHubcloudStreamUrls] = useState<any[]>([])
   const [fetchingHubcloud, setFetchingHubcloud] = useState(false)
@@ -213,8 +210,49 @@ export default function KMMovieDetailPage({ params }: { params: { id: string } }
                 isStreamUrl: false
               })
             }
+          } else if (link.type === 'download' && link.provider === 'GDFLIX') {
+            // Fetch GDFLIX stream URLs immediately
+            try {
+              const gdflixRes = await fetch(`/api/gdflix?url=${encodeURIComponent(link.url)}`, {
+                headers: {
+                  'x-api-key': userApiKey
+                }
+              })
+              const gdflixData = await gdflixRes.json()
+              
+              if (gdflixData.success && gdflixData.links && gdflixData.links.length > 0) {
+                // Add each stream URL as a separate entry
+                gdflixData.links.forEach((streamLink: any) => {
+                  allLinks.push({
+                    ...link,
+                    url: streamLink.link,
+                    displayName: `GDFLIX - ${streamLink.server}`,
+                    streamServer: streamLink.server,
+                    streamType: streamLink.type,
+                    isStreamUrl: true,
+                    originalProvider: link.provider,
+                    canDownload: true,
+                    canStream: true
+                  })
+                })
+              } else {
+                // If GDFLIX fetch fails, still show the original link
+                allLinks.push({
+                  ...link,
+                  displayName: `${link.provider} (Failed to load links)`,
+                  isStreamUrl: false
+                })
+              }
+            } catch (error) {
+              console.error("Error fetching GDFLIX streams:", error)
+              allLinks.push({
+                ...link,
+                displayName: `${link.provider} (Error loading links)`,
+                isStreamUrl: false
+              })
+            }
           } else {
-            // For non-HubCloud providers, add as-is
+            // For non-HubCloud and non-GDFLIX providers, add as-is
             allLinks.push({
               ...link,
               displayName: link.provider,
@@ -243,11 +281,6 @@ export default function KMMovieDetailPage({ params }: { params: { id: string } }
     setMagicLinks([])
     setCopiedIndex(null)
     fetchAllProviderLinks(link.url)
-  }
-
-  const handleStreamClick = (streamUrl: string) => {
-    setSelectedStreamUrl(streamUrl)
-    setStreamDialogOpen(true)
   }
 
   const handleHubcloudClick = async (hubcloudUrl: string) => {
@@ -302,7 +335,9 @@ export default function KMMovieDetailPage({ params }: { params: { id: string } }
   }
 
   const isGoogleDriveDirectLink = (url: string) => {
-    return url.includes('video-downloads.googleusercontent.com')
+    return url.includes('video-downloads.googleusercontent.com') || 
+           url.includes('drive.google.com') ||
+           url.includes('googleapis.com')
   }
 
   const goBack = () => {
@@ -383,34 +418,6 @@ export default function KMMovieDetailPage({ params }: { params: { id: string } }
                   </div>
                 )}
 
-                {/* Movie Details */}
-                {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  {movieDetails.releaseYear && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium">Year:</span>
-                      <span className="text-sm text-muted-foreground">{movieDetails.releaseYear}</span>
-                    </div>
-                  )}
-                  {movieDetails.duration && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium">Duration:</span>
-                      <span className="text-sm text-muted-foreground">{movieDetails.duration}</span>
-                    </div>
-                  )}
-                  {movieDetails.director && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium">Director:</span>
-                      <span className="text-sm text-muted-foreground">{movieDetails.director}</span>
-                    </div>
-                  )}
-                  {movieDetails.genres && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium">Genres:</span>
-                      <span className="text-sm text-muted-foreground">{movieDetails.genres}</span>
-                    </div>
-                  )}
-                </div> */}
-
                 {/* Languages */}
                 {movieDetails.languages && movieDetails.languages.length > 0 && (
                   <div className="mb-4">
@@ -425,30 +432,6 @@ export default function KMMovieDetailPage({ params }: { params: { id: string } }
                   </div>
                 )}
                 
-                {/* Storyline */}
-                {/* <div className="bg-slate-100 dark:bg-black/20 rounded-xl p-4 border border-slate-200 dark:border-white/5 mb-6">
-                  <h2 className="flex items-center gap-2 text-lg font-semibold mb-3">
-                    <Info className="h-4 w-4 text-purple-500" />
-                    Storyline
-                  </h2>
-                  <div className="relative">
-                    <div className={`relative overflow-hidden transition-all duration-300 text-slate-700 dark:text-muted-foreground ${showFullOverview ? '' : 'max-h-[4.5em]'}`}>
-                      <p>{movieDetails.storyline || "No storyline available."}</p>
-                    </div>
-                    {!showFullOverview && movieDetails.storyline && movieDetails.storyline.length > 200 && (
-                      <div className="absolute bottom-0 left-0 w-full h-8 bg-gradient-to-t from-slate-100 dark:from-black/20 to-transparent"></div>
-                    )}
-                    {movieDetails.storyline && movieDetails.storyline.length > 200 && (
-                      <button 
-                        onClick={() => setShowFullOverview(!showFullOverview)} 
-                        className="text-purple-600 dark:text-purple-500 font-medium text-xs mt-2 hover:text-purple-500 dark:hover:text-purple-400 transition-colors"
-                      >
-                        {showFullOverview ? "Read Less" : "Read More"}
-                      </button>
-                    )}
-                  </div>
-                </div> */}
-
                 {/* Download Links */}
                 {movieDetails.downloadLinks && movieDetails.downloadLinks.length > 0 && (
                   <div className="mt-6">
@@ -500,8 +483,16 @@ export default function KMMovieDetailPage({ params }: { params: { id: string } }
                         <div key={index} className="space-y-2">
                           <div className="flex items-center justify-between">
                             <span className="text-sm font-medium text-muted-foreground">
-                              {link.displayName} {link.isStreamUrl ? '(Stream)' : `(${link.type?.toUpperCase() || 'Download'})`}
+                              {link.displayName} {link.isStreamUrl ? 
+                                (link.canDownload && link.canStream ? '(Download/Stream)' : '(Stream)') : 
+                                `(${link.type?.toUpperCase() || 'Download'})`
+                              }
                             </span>
+                            {link.streamType && (
+                              <Badge variant="outline" className="text-xs">
+                                {link.streamType.toUpperCase()}
+                              </Badge>
+                            )}
                           </div>
                           <div className="flex gap-2">
                             <Input
@@ -510,14 +501,30 @@ export default function KMMovieDetailPage({ params }: { params: { id: string } }
                               className="flex-1 text-xs"
                             />
                             {isGoogleDriveDirectLink(link.url) ? (
-                              <Button
-                                variant="default"
-                                size="icon"
-                                onClick={() => handleDirectDownload(link.url)}
-                                className="shrink-0"
-                              >
-                                <Download className="h-4 w-4" />
-                              </Button>
+                              <div className="flex gap-1">
+                                <Button
+                                  variant="default"
+                                  size="icon"
+                                  onClick={() => handleDirectDownload(link.url)}
+                                  className="shrink-0"
+                                  title="Download"
+                                >
+                                  <Download className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  onClick={() => copyToClipboard(link.url, index)}
+                                  className="shrink-0"
+                                  title="Copy URL"
+                                >
+                                  {copiedIndex === index ? (
+                                    <Check className="h-4 w-4 text-green-500" />
+                                  ) : (
+                                    <Copy className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              </div>
                             ) : (
                               <Button
                                 variant="outline"
@@ -536,7 +543,9 @@ export default function KMMovieDetailPage({ params }: { params: { id: string } }
                         </div>
                       ))}
                       <div className="pt-2 text-xs text-muted-foreground">
-                        Stream links can be opened in VLC or your preferred media player. Download links can be used for file downloads.
+                        • Stream links can be opened in VLC or your preferred media player<br/>
+                        • Download links can be used for file downloads<br/>
+                        • GDFLIX links provide direct Google Drive access for streaming and downloading
                       </div>
                     </div>
                   ) : (

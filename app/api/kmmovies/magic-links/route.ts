@@ -110,7 +110,7 @@ async function getMagicLinksData(url: string) {
       });
     }
 
-    // Extract GDFLIX link
+    // Extract GDFLIX link - keep as download type for processing
     const gdflixLink = $('a[href*="gdflix"]:contains("GDFLIX")').attr('href');
     if (gdflixLink) {
       links.push({
@@ -118,11 +118,11 @@ async function getMagicLinksData(url: string) {
         provider: 'GDFLIX',
         url: gdflixLink,
         quality: 'Download',
-        description: 'Google Drive based download'
+        description: 'Google Drive based download (will be processed for direct links)'
       });
     }
 
-    // Extract GDTOT link
+    // Extract GDTOT link - but we'll filter this out in the frontend
     const gdtotLink = $('a[href*="gdtot"]:contains("GDTOT")').attr('href');
     if (gdtotLink) {
       links.push({
@@ -175,6 +175,7 @@ async function getMagicLinksData(url: string) {
             }
           } else if (text.includes('GDFLIX')) {
             provider = 'GDFLIX';
+            type = 'download'; // Keep as download for processing
           } else if (text.includes('GDTOT')) {
             provider = 'GDTOT';
           } else if (text.includes('HUBCLOUD')) {
