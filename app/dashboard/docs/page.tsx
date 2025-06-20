@@ -18,6 +18,7 @@ import KMmoviesDocs from "@/components/ui/kmmovies-docs";
 import DesireMoviesDocs from "@/components/ui/desiremovies-docs";
 import VidSrcDocs from "@/components/ui/vidsrc-docs";
 import Movies4UDocs from "@/components/ui/movies4u-docs";
+import UHDMoviesDocs from "@/components/ui/uhdmovies-docs";
 
 interface ApiEndpoint {
   method: string;
@@ -395,6 +396,12 @@ curl -X GET \\
                   <div className="flex items-center gap-2">
                     <Film className="h-4 w-4" />
                     KMmovies API
+                  </div>
+                </SelectItem>
+                <SelectItem value="uhdmovies" className="text-sm">
+                  <div className="flex items-center gap-2">
+                    <Film className="h-4 w-4" />
+                    UHDMovies API
                   </div>
                 </SelectItem>
                 <SelectItem value="movies4u" className="text-sm">
@@ -960,6 +967,10 @@ curl -X GET \\
       ) : selectedApiType === "kmmovies" ? (
         <div className="w-full overflow-hidden">
           <KMmoviesDocs apiKey={apiKey} onApiKeyChange={setApiKey} />
+        </div>
+      ) : selectedApiType === "uhdmovies" ? (
+        <div className="w-full overflow-hidden">
+          <UHDMoviesDocs apiKey={apiKey} onApiKeyChange={setApiKey} />
         </div>
       ) : selectedApiType === "movies4u" ? (
         <div className="w-full overflow-hidden">
