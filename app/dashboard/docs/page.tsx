@@ -22,6 +22,7 @@ import UHDMoviesDocs from "@/components/ui/uhdmovies-docs";
 import HDHub4uDocs from "@/components/ui/hdhub4u-docs";
 import FilmyFlyDocs from "@/components/ui/filmyfly-docs";
 import MoviesWorldDocs from "@/components/ui/moviesworld-docs";
+import ShowboxDocs from "@/components/ui/showbox-docs";
 
 interface ApiEndpoint {
   method: string;
@@ -391,6 +392,7 @@ curl -X GET \\
                 </SelectItem>
                 <SelectItem value="10bitclub" className="text-sm">
                   <div className="flex items-center gap-2">
+                    <Film className="h-4 w-4" />
                     10BitClub API
                   </div>
                 </SelectItem>
@@ -410,12 +412,6 @@ curl -X GET \\
                   <div className="flex items-center gap-2">
                     <Clapperboard className="h-4 w-4" />
                     Movies4U API
-                  </div>
-                </SelectItem>
-                <SelectItem value="gyanigurus" className="text-sm">
-                  <div className="flex items-center gap-2">
-                    <Film className="h-4 w-4" />
-                    GyanGurus API
                   </div>
                 </SelectItem>
                 <SelectItem value="desiremovies" className="text-sm">
@@ -446,6 +442,12 @@ curl -X GET \\
                   <div className="flex items-center gap-2">
                     <Video className="h-4 w-4" />
                     MoviesWorld API
+                  </div>
+                </SelectItem>
+                <SelectItem value="showbox" className="text-sm">
+                  <div className="flex items-center gap-2">
+                    <Video className="h-4 w-4" />
+                    Showbox API
                   </div>
                 </SelectItem>
               </SelectContent>
@@ -1019,6 +1021,10 @@ curl -X GET \\
       ) : selectedApiType === "moviesworld" ? (
         <div className="w-full overflow-hidden">
           <MoviesWorldDocs apiKey={apiKey} onApiKeyChange={setApiKey} />
+        </div>
+      ) : selectedApiType === "showbox" ? (
+        <div className="w-full overflow-hidden">
+          <ShowboxDocs apiKey={apiKey} onApiKeyChange={setApiKey} />
         </div>
       ) : (
         <div className="w-full overflow-hidden">
