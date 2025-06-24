@@ -5,7 +5,9 @@ import { validateApiKey, createUnauthorizedResponse } from '@/lib/middleware/api
 interface EpisodeLink {
   episode: string;
   episodeNumber: number;
-  episodeUrl: string;
+  driveUrl720p?: string;
+  driveUrl1080p?: string;
+  techyboyUrl?: string;
 }
 
 interface DownloadLink {
@@ -94,7 +96,7 @@ async function scrapeHDHub4uDetails(url: string): Promise<{ title: string; type:
     // Enhanced content type detection
     const hasDirectDownloads = $('a[href*="hubdrive.wales"], a[href*="hdstream4u.com"], a[href*="hubstream.art"], a[href*="hubcdn.fans"]').length > 0;
     
-    // Enhanced episode detection - look for both EPISODE and EPiSODE patterns
+    // Enhanced episode detection - look for all possible episode patterns
     const hasEpisodeLinks = $('h4').toArray().some(element => {
       const $heading = $(element);
       const headingText = $heading.text().trim();
@@ -103,6 +105,10 @@ async function scrapeHDHub4uDetails(url: string): Promise<{ title: string; type:
       const $span = $(element);
       const spanText = $span.text().trim();
       return spanText.includes('EPiSODE') && spanText.match(/EPiSODE\s*\d+/i);
+    }) || $('h3').toArray().some(element => {
+      const $heading = $(element);
+      const headingText = $heading.text().trim();
+      return headingText.includes('EPiSODE') && $heading.find('a[href*="techyboy4u.com"]').length > 0;
     });
 
     console.log('Content detection:', { hasDirectDownloads, hasEpisodeLinks });
@@ -139,14 +145,49 @@ async function scrapeHDHub4uDetails(url: string): Promise<{ title: string; type:
               episodes.push({
                 episode: episodeText,
                 episodeNumber,
-                episodeUrl
+                techyboyUrl: episodeUrl
               });
             }
           }
         }
       });
 
-      // Method 2: Extract from EPiSODE span patterns with following links
+      // Method 2: Extract from h3 EPiSODE links (older format)
+      $('h3').each((_, element) => {
+        const $heading = $(element);
+        const $links = $heading.find('a');
+        
+        $links.each((_, linkElement) => {
+          const $link = $(linkElement);
+          const linkText = $link.text().trim();
+          const linkHref = $link.attr('href');
+          
+          if (linkText.includes('EPiSODE') && linkHref && linkHref.includes('techyboy4u.com')) {
+            const episodeMatch = linkText.match(/EPiSODE\s*(\d+)/i);
+            if (episodeMatch) {
+              const episodeNumber = parseInt(episodeMatch[1]);
+              const episodeText = `Episode ${episodeNumber}`;
+              
+              // Check if this episode already exists
+              const existingEpisodeIndex = episodes.findIndex(ep => ep.episodeNumber === episodeNumber);
+              if (existingEpisodeIndex !== -1) {
+                // Update existing episode with techyboy URL
+                episodes[existingEpisodeIndex].techyboyUrl = linkHref;
+              } else {
+                episodes.push({
+                  episode: episodeText,
+                  episodeNumber,
+                  techyboyUrl: linkHref
+                });
+              }
+            }
+          }
+        });
+      });
+
+      // Method 3: Extract from EPiSODE span patterns with drive links only
+      const processedEpisodes = new Set<number>();
+      
       $('h4 span, h4 strong').each((_, element) => {
         const $span = $(element);
         const spanText = $span.text().trim();
@@ -155,28 +196,69 @@ async function scrapeHDHub4uDetails(url: string): Promise<{ title: string; type:
           const episodeMatch = spanText.match(/EPiSODE\s*(\d+)/i);
           if (episodeMatch) {
             const episodeNumber = parseInt(episodeMatch[1]);
+            
+            // Skip if we already processed this episode for drive links
+            if (processedEpisodes.has(episodeNumber)) {
+              return;
+            }
+            
             const episodeText = `Episode ${episodeNumber}`;
             
-            // Look for streaming links in the following h4 elements
+            // Look for drive links in the following h4 elements
             let $nextH4 = $span.closest('h4').next('h4');
-            let streamUrl = '';
+            let driveUrl720p = '';
+            let driveUrl1080p = '';
             
-            // Check multiple following h4 elements for WATCH links
-            for (let i = 0; i < 3 && $nextH4.length; i++) {
-              const watchLink = $nextH4.find('a[href*="hdstream4u.com"]').first();
-              if (watchLink.length) {
-                streamUrl = watchLink.attr('href') || '';
-                break;
+            // Check multiple following h4 elements for quality and drive links
+            for (let i = 0; i < 10 && $nextH4.length; i++) {
+              const h4Text = $nextH4.text().trim();
+              
+              // Extract 720p drive link
+              if (h4Text.includes('720p')) {
+                $nextH4.find('a').each((_, linkEl) => {
+                  const $link = $(linkEl);
+                  const linkText = $link.text().trim();
+                  const linkHref = $link.attr('href');
+                  
+                  if (linkHref && linkText === 'Drive' && linkHref.includes('hubdrive.wales')) {
+                    driveUrl720p = linkHref;
+                  }
+                });
               }
+              
+              // Extract 1080p drive link
+              if (h4Text.includes('1080p')) {
+                $nextH4.find('a').each((_, linkEl) => {
+                  const $link = $(linkEl);
+                  const linkText = $link.text().trim();
+                  const linkHref = $link.attr('href');
+                  
+                  if (linkHref && linkText === 'Drive' && linkHref.includes('hubdrive.wales')) {
+                    driveUrl1080p = linkHref;
+                  }
+                });
+              }
+              
               $nextH4 = $nextH4.next('h4');
             }
             
-            if (streamUrl) {
-              episodes.push({
-                episode: episodeText,
-                episodeNumber,
-                episodeUrl: streamUrl
-              });
+            if (driveUrl720p || driveUrl1080p) {
+              // Check if episode already exists from h3 extraction
+              const existingEpisodeIndex = episodes.findIndex(ep => ep.episodeNumber === episodeNumber);
+              if (existingEpisodeIndex !== -1) {
+                // Update existing episode with drive URLs
+                episodes[existingEpisodeIndex].driveUrl720p = driveUrl720p || undefined;
+                episodes[existingEpisodeIndex].driveUrl1080p = driveUrl1080p || undefined;
+              } else {
+                episodes.push({
+                  episode: episodeText,
+                  episodeNumber,
+                  driveUrl720p: driveUrl720p || undefined,
+                  driveUrl1080p: driveUrl1080p || undefined
+                });
+              }
+              
+              processedEpisodes.add(episodeNumber);
             }
           }
         }

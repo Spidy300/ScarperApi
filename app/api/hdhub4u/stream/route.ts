@@ -127,33 +127,6 @@ async function getRedirectLinks(link: string): Promise<string> {
     await new Promise(resolve => setTimeout(resolve, waitTime));
 
     console.log('Blog link:', blogLink);
-
-    let vcloudLink = 'Invalid Request';
-    let attempts = 0;
-    const maxAttempts = 5;
-    
-    while (vcloudLink.includes('Invalid Request') && attempts < maxAttempts) {
-      const blogRes = await fetch(blogLink, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        }
-      });
-      
-      const blogText = await blogRes.text();
-      
-      if (blogText.includes('Invalid Request')) {
-        console.log('Invalid request, retrying...');
-        attempts++;
-        await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds before retry
-      } else {
-        const reurlMatch = blogText.match(/var reurl = "([^"]+)"/);
-        if (reurlMatch) {
-          vcloudLink = reurlMatch[1];
-          break;
-        }
-      }
-    }
-
     return blogLink;
   } catch (err) {
     console.log('Error in getRedirectLinks:', err);
@@ -161,191 +134,234 @@ async function getRedirectLinks(link: string): Promise<string> {
   }
 }
 
-async function hdhub4uGetStream(link: string): Promise<StreamLink[]> {
+async function extractHBLinksStream(hbUrl: string): Promise<StreamLink[]> {
   try {
-    console.log('Processing HDHub4u stream link:', link);
-
-    let hubdriveLink = '';
-
-    // Handle hubcdn.fans links directly
-    if (link.includes('hubcdn.fans')) {
-      console.log('Processing hubcdn.fans link:', link);
-      const hubcdnRes = await fetch(link, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        }
-      });
+    console.log('Processing HBLinks URL:', hbUrl);
+    
+    const response = await fetch(hbUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      }
+    });
+    
+    const html = await response.text();
+    const $ = load(html);
+    
+    const streamLinks: StreamLink[] = [];
+    
+    // Extract episode download links from hubdrive.wales
+    $('.entry-content h5 a[href*="hubdrive.wales"]').each((_, element) => {
+      const $link = $(element);
+      const url = $link.attr('href');
+      const text = $link.text().trim();
       
-      const hubcdnText = await hubcdnRes.text();
+      if (url && text) {
+        // Extract episode number and size from text
+        const episodeMatch = text.match(/Episode\s*(\d+)/i);
+        const sizeMatch = text.match(/(\d+(?:\.\d+)?\s*[MG]B)/i);
+        
+        const episodeNum = episodeMatch ? episodeMatch[1] : 'Unknown';
+        const size = sizeMatch ? sizeMatch[1] : 'Unknown';
+        
+        streamLinks.push({
+          server: `HBLinks Episode ${episodeNum}`,
+          link: url,
+          type: 'download',
+          copyable: true
+        });
+      }
+    });
 
-      // Extract reurl from script tag
-      const reurlMatch = hubcdnText.match(/var reurl = "([^"]+)"/);
-      if (reurlMatch && reurlMatch[1]) {
-        const reurlValue = reurlMatch[1];
-        console.log('Found reurl:', reurlValue);
-
-        // Extract base64 encoded part after r=
-        const urlMatch = reurlValue.match(/\?r=(.+)$/);
-        if (urlMatch && urlMatch[1]) {
-          const base64Encoded = urlMatch[1];
-          console.log('Base64 encoded part:', base64Encoded);
-
-          try {
-            const decodedUrl = atob(base64Encoded);
-            console.log('Decoded URL:', decodedUrl);
-            
-            let finalVideoUrl = decodedUrl;
-            const linkMatch = decodedUrl.match(/[?&]link=(.+)$/);
-            if (linkMatch && linkMatch[1]) {
-              finalVideoUrl = decodeURIComponent(linkMatch[1]);
-              console.log('Extracted video URL:', finalVideoUrl);
+    // Extract quality-based download links from h3 elements
+    $('.entry-content h3').each((_, element) => {
+      const $h3 = $(element);
+      const h3Text = $h3.text().trim();
+      
+      // Check for quality patterns (480p, 720p, 1080p)
+      const qualityMatch = h3Text.match(/(480p|720p|1080p)/i);
+      if (qualityMatch) {
+        const quality = qualityMatch[1];
+        
+        // Extract Drive and Direct links only (skip Instant)
+        $h3.find('a').each((_, linkEl) => {
+          const $link = $(linkEl);
+          const linkText = $link.text().trim();
+          const linkHref = $link.attr('href');
+          
+          if (linkHref && linkText) {
+            let server = '';
+            if (linkText === 'Drive' && linkHref.includes('hubdrive.wales')) {
+              server = `HBLinks ${quality} Drive`;
+            } else if (linkText === 'Direct' && linkHref.includes('hubcloud.one')) {
+              server = `HBLinks ${quality} Direct`;
             }
             
-            return [
-              {
-                server: 'HDHub4u Direct',
-                link: finalVideoUrl,
-                type: 'mp4',
-                copyable: true,
-              },
-            ];
-          } catch (decodeError) {
-            console.error('Error decoding base64:', decodeError);
+            if (server) {
+              streamLinks.push({
+                server,
+                link: linkHref,
+                type: 'download',
+                copyable: true
+              });
+            }
           }
+        });
+      }
+    });
+    
+    // Extract image-based download links
+    $('a[href*="hubcloud.one"] img, a[href*="hubdrive.wales"] img').each((_, element) => {
+      const $img = $(element);
+      const $link = $img.closest('a');
+      const linkHref = $link.attr('href');
+      const imgSrc = $img.attr('src');
+      
+      if (linkHref) {
+        let server = '';
+        if (linkHref.includes('hubcloud.one') && imgSrc && imgSrc.includes('Cloud-Logo')) {
+          server = 'HBLinks Cloud Image';
+        } else if (linkHref.includes('hubdrive.wales') && imgSrc && imgSrc.includes('Hubdrive')) {
+          server = 'HBLinks Drive Image';
+        }
+        
+        if (server && !streamLinks.some(link => link.link === linkHref)) {
+          streamLinks.push({
+            server,
+            link: linkHref,
+            type: 'download',
+            copyable: true
+          });
         }
       }
-    }
+    });
 
-    if (link.includes('hubdrive')) {
-      const hubdriveRes = await fetch(link, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+    // Fallback: Extract ANY hubdrive.wales and hubcloud.one links found on the page
+    $('a[href*="hubdrive.wales"], a[href*="hubcloud.one"]').each((_, element) => {
+      const $link = $(element);
+      const linkHref = $link.attr('href');
+      const linkText = $link.text().trim();
+      
+      if (linkHref && !streamLinks.some(link => link.link === linkHref)) {
+        let server = '';
+        if (linkHref.includes('hubdrive.wales')) {
+          server = 'HBLinks Fallback Drive';
+        } else if (linkHref.includes('hubcloud.one')) {
+          server = 'HBLinks Fallback Cloud';
         }
-      });
-      
-      const hubdriveText = await hubdriveRes.text();
-      const $ = load(hubdriveText);
-      hubdriveLink = $('.btn.btn-primary.btn-user.btn-success1.m-1').attr('href') || link;
-    } else {
-      const res = await fetch(link, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        
+        if (server) {
+          streamLinks.push({
+            server,
+            link: linkHref,
+            type: 'download',
+            copyable: true
+          });
         }
-      });
-      
-      const text = await res.text();
-      const encryptedString = text.split("s('o','")?.[1]?.split("',180")?.[0];
-      console.log('Encrypted string:', encryptedString);
-      
-      if (!encryptedString) {
-        throw new Error('Could not extract encrypted string from response');
       }
+    });
+    
+    // Extract streaming links from various patterns
+    $('a[href*="streamtape"], a[href*="doodstream"], a[href*="mixdrop"], a[href*="upstream"]').each((_, element) => {
+      const $link = $(element);
+      const url = $link.attr('href');
       
+      if (url) {
+        let server = 'Unknown';
+        if (url.includes('streamtape')) server = 'StreamTape';
+        else if (url.includes('doodstream')) server = 'DoodStream';
+        else if (url.includes('mixdrop')) server = 'MixDrop';
+        else if (url.includes('upstream')) server = 'UpStream';
+        
+        streamLinks.push({
+          server: `HBLinks ${server}`,
+          link: url,
+          type: 'redirect',
+          copyable: true
+        });
+      }
+    });
+    
+    // Also look for direct video links
+    $('a[href$=".mp4"], a[href$=".mkv"], a[href*=".mp4"], a[href*="video"]').each((_, element) => {
+      const $link = $(element);
+      const url = $link.attr('href');
+      
+      if (url && !streamLinks.some(link => link.link === url)) {
+        streamLinks.push({
+          server: 'HBLinks Direct',
+          link: url,
+          type: 'mp4',
+          copyable: true
+        });
+      }
+    });
+    
+    console.log(`Extracted ${streamLinks.length} links from HBLinks`);
+    return streamLinks;
+    
+  } catch (error) {
+    console.error('Error extracting HBLinks stream:', error);
+    return [];
+  }
+}
+
+async function hdhub4uGetStream(link: string): Promise<StreamLink[]> {
+  try {
+    console.log('Processing stream link:', link);
+
+    const allStreamLinks: StreamLink[] = [];
+
+    const res = await fetch(link, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      }
+    });
+    
+    const text = await res.text();
+    
+    // Always check for HBLinks URL in the response
+    const hbLinksMatch = text.match(/https:\/\/hblinks\.pro\/archives\/\d+/);
+    if (hbLinksMatch) {
+      console.log('Found HBLinks URL:', hbLinksMatch[0]);
+      const hbLinksStreams = await extractHBLinksStream(hbLinksMatch[0]);
+      allStreamLinks.push(...hbLinksStreams);
+    }
+    
+    const encryptedString = text.split("s('o','")?.[1]?.split("',180")?.[0];
+    console.log('Encrypted string:', encryptedString);
+    
+    if (encryptedString) {
       const decodedString: any = decodeString(encryptedString);
       console.log('Decoded string:', decodedString);
       
-      if (!decodedString?.o) {
-        throw new Error('Invalid decoded data structure');
-      }
-      
-      link = atob(decodedString.o);
-      console.log('New link:', link);
+      if (decodedString?.o) {
+        const redirectUrl = atob(decodedString.o);
+        console.log('Redirect URL:', redirectUrl);
 
-      const redirectLink = await getRedirectLinks(link);
-      console.log('Redirect link:', redirectLink);
+        const redirectLink = await getRedirectLinks(redirectUrl);
+        console.log('Final redirect link:', redirectLink);
 
-      const redirectLinkRes = await fetch(redirectLink, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        }
-      });
-      
-      const redirectLinkText = await redirectLinkRes.text();
-      const $ = load(redirectLinkText);
-      
-      hubdriveLink = $('h3:contains("1080p")').find('a').attr('href');
-      
-      if (!hubdriveLink) {
-        const hubcloudMatch = redirectLinkText.match(/href="(https:\/\/hubcloud\.[^\/]+\/drive\/[^"]+)"/);
-        if (hubcloudMatch) {
-          hubdriveLink = hubcloudMatch[1];
-        }
-      }
-      
-      if (hubdriveLink?.includes('hubdrive')) {
-        const hubdriveRes = await fetch(hubdriveLink, {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-          }
-        });
-        
-        const hubdriveText = await hubdriveRes.text();
-        const $$ = load(hubdriveText);
-        hubdriveLink = $$('.btn.btn-primary.btn-user.btn-success1.m-1').attr('href') || hubdriveLink;
-      }
-      
-      console.log('Hubdrive link:', hubdriveLink);
-    }
-
-    if (!hubdriveLink) {
-      throw new Error('Could not extract hubdrive link');
-    }
-
-    const hubdriveLinkRes = await fetch(hubdriveLink, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-      }
-    });
-    
-    const hubcloudText = await hubdriveLinkRes.text();
-    const hubcloudMatch = hubcloudText.match(/<META HTTP-EQUIV="refresh" content="0; url=([^"]+)">/i);
-    const hubcloudLink = hubcloudMatch?.[1] || hubdriveLink;
-
-    console.log('Hubcloud link:', hubcloudLink);
-
-    // Extract the final video URL from hubcloud
-    const hubcloudRes = await fetch(hubcloudLink, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-      }
-    });
-    
-    const finalText = await hubcloudRes.text();
-    
-    // Try to extract video URL from various patterns
-    const videoUrlPatterns = [
-      /sources:\s*\[\s*{\s*file:\s*"([^"]+)"/,
-      /file:\s*"([^"]+\.mp4[^"]*)"/,
-      /src:\s*"([^"]+\.mp4[^"]*)"/,
-      /"file":"([^"]+\.mp4[^"]*)"/
-    ];
-    
-    for (const pattern of videoUrlPatterns) {
-      const match = finalText.match(pattern);
-      if (match && match[1]) {
-        return [
-          {
-            server: 'HDHub4u Stream',
-            link: match[1],
-            type: 'mp4',
+        // Check if redirect link contains hblinks.pro
+        if (redirectLink.includes('hblinks.pro')) {
+          console.log('Redirect link contains hblinks.pro, extracting from:', redirectLink);
+          const hbLinksStreams = await extractHBLinksStream(redirectLink);
+          allStreamLinks.push(...hbLinksStreams);
+        } else {
+          allStreamLinks.push({
+            server: 'HDHub4u Redirect',
+            link: redirectLink,
+            type: 'redirect',
             copyable: true,
-          }
-        ];
+          });
+        }
       }
     }
 
-    // If no direct video URL found, return the hubcloud link
-    return [
-      {
-        server: 'HDHub4u Hubcloud',
-        link: hubcloudLink,
-        type: 'redirect',
-        copyable: true,
-      }
-    ];
+    return allStreamLinks;
 
   } catch (error) {
-    console.error('Error in HDHub4u stream extraction:', error);
+    console.error('Error in stream extraction:', error);
     return [];
   }
 }
@@ -372,21 +388,17 @@ export async function GET(request: NextRequest): Promise<NextResponse<HDHub4uStr
       );
     }
 
-    // Validate that it's a techyboy4u URL (HDHub4u episode links)
-    if (!episodeUrl.includes('techyboy4u.com')) {
-      return NextResponse.json<HDHub4uStreamResponse>(
-        { 
-          success: false, 
-          error: 'Invalid URL',
-          message: 'URL must be from techyboy4u.com (HDHub4u episode link)'
-        },
-        { status: 400 }
-      );
+    console.log('Processing stream request for URL:', episodeUrl);
+
+    let streamLinks: StreamLink[] = [];
+
+    // Handle hblinks.pro URLs directly
+    if (episodeUrl.includes('hblinks.pro')) {
+      streamLinks = await extractHBLinksStream(episodeUrl);
+    } else {
+      // Handle all other URLs
+      streamLinks = await hdhub4uGetStream(episodeUrl);
     }
-
-    console.log('Processing HDHub4u stream request for URL:', episodeUrl);
-
-    const streamLinks = await hdhub4uGetStream(episodeUrl);
 
     if (!streamLinks || streamLinks.length === 0) {
       return NextResponse.json<HDHub4uStreamResponse>({
@@ -407,7 +419,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<HDHub4uStr
     });
 
   } catch (error: unknown) {
-    console.error('HDHub4u stream API error:', error);
+    console.error('Stream API error:', error);
     
     return NextResponse.json<HDHub4uStreamResponse>(
       { 
