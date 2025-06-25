@@ -101,6 +101,20 @@ const apiCategories: ApiCategory[] = [
         ]
       }
     ]
+  },
+  {
+    name: "TechyBoy4U Extraction",
+    icon: <ExternalLink className="h-4 w-4" />,
+    endpoints: [
+      {
+        method: "GET",
+        endpoint: "/api/uhdmovies/drive",
+        description: "Extract and decode TechyBoy4U encrypted streaming links",
+        params: [
+          { name: "url", type: "string", required: true, description: "TechyBoy4U encrypted URL (techyboy4u.com)" }
+        ]
+      }
+    ]
   }
 ];
 
@@ -183,133 +197,760 @@ export default function HDHub4uDocs({ apiKey, onApiKeyChange }: HDHub4uDocsProps
     
     switch (language) {
       case "javascript":
-        return `// HDHub4u API Workflow Example
-// Step 1: Search for content
-const searchResponse = await fetch("${baseUrl}/api/hdhub4u?search=avengers", {
-  headers: {
-    "x-api-key": "YOUR_API_KEY",
-    "Content-Type": "application/json"
-  }
-});
-const searchData = await searchResponse.json();
-console.log(searchData.data.items); // Search results
+        return `// HDHub4u + TechyBoy4U Complete Extraction Workflow
+// This example shows how to extract streaming links from TechyBoy4U URLs
 
-// Step 2: Get content details
-const detailsResponse = await fetch("${baseUrl}/api/hdhub4u/details?url=" + encodeURIComponent(searchData.data.items[0].postUrl), {
-  headers: {
-    "x-api-key": "YOUR_API_KEY",
-    "Content-Type": "application/json"
-  }
-});
-const detailsData = await detailsResponse.json();
+// Step 1: Search for content on HDHub4u
+async function searchHDHub4u(query) {
+  const response = await fetch("${baseUrl}/api/hdhub4u?search=" + encodeURIComponent(query), {
+    headers: {
+      "x-api-key": "YOUR_API_KEY",
+      "Content-Type": "application/json"
+    }
+  });
+  return await response.json();
+}
 
-if (detailsData.data.type === "series") {
-  // For TV Series - get streaming links
-  const episodeUrl = detailsData.data.episodes[0].episodeUrl;
-  const streamResponse = await fetch("${baseUrl}/api/hdhub4u/stream?url=" + encodeURIComponent(episodeUrl), {
+// Step 2: Get series/movie details from HDHub4u
+async function getContentDetails(postUrl) {
+  const response = await fetch("${baseUrl}/api/hdhub4u/details?url=" + encodeURIComponent(postUrl), {
     headers: {
       "x-api-key": "YOUR_API_KEY",
       "Content-Type": "application/json"
     }
   });
-  const streamData = await streamResponse.json();
-  console.log(streamData.data.streamLinks); // Direct streaming URLs
-} else if (detailsData.data.type === "movie_direct") {
-  // For Movies with direct downloads
-  const hubdriveUrl = detailsData.data.directDownloads[0].downloadUrl;
+  return await response.json();
+}
+
+// Step 3: Extract TechyBoy4U streaming links
+async function extractTechyBoyLinks(techyboyUrl) {
+  const response = await fetch("${baseUrl}/api/uhdmovies/drive?url=" + encodeURIComponent(techyboyUrl), {
+    headers: {
+      "x-api-key": "YOUR_API_KEY",
+      "Content-Type": "application/json"
+    }
+  });
+  return await response.json();
+}
+
+// Step 4: Complete workflow example
+async function getStreamingLinks(searchQuery) {
+  try {
+    console.log("🔍 Searching for:", searchQuery);
+    
+    // Search for content
+    const searchResults = await searchHDHub4u(searchQuery);
+    if (!searchResults.success || !searchResults.data.items.length) {
+      throw new Error("No search results found");
+    }
+    
+    console.log("📚 Found", searchResults.data.items.length, "results");
+    const firstResult = searchResults.data.items[0];
+    console.log("📖 Processing:", firstResult.title);
+    
+    // Get content details
+    const details = await getContentDetails(firstResult.postUrl);
+    if (!details.success) {
+      throw new Error("Failed to get content details");
+    }
+    
+    console.log("🎬 Content type:", details.data.type);
+    
+    if (details.data.type === "series" && details.data.episodes) {
+      // Process TV series episodes
+      console.log("📺 Processing", details.data.episodes.length, "episodes");
+      
+      const allStreamingLinks = [];
+      
+      for (const episode of details.data.episodes) {
+        if (episode.techyboyUrl) {
+          console.log("🔓 Extracting links for:", episode.episode);
+          
+          // Extract TechyBoy4U links
+          const techyboyResult = await extractTechyBoyLinks(episode.techyboyUrl);
+          
+          if (techyboyResult.success) {
+            allStreamingLinks.push({
+              episode: episode.episode,
+              episodeNumber: episode.episodeNumber,
+              originalUrl: episode.techyboyUrl,
+              extractedPath: techyboyResult.extractedPath,
+              fullUrl: techyboyResult.fullUrl,
+              streamingLinks: techyboyResult.instantDownload ? [techyboyResult.instantDownload] : [],
+              resumeCloudLinks: techyboyResult.resumeCloud ? [techyboyResult.resumeCloud] : [],
+              cloudResumeDownload: techyboyResult.cloudResumeDownload
+            });
+          }
+          
+          // Add delay to avoid rate limiting
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
+      
+      return {
+        title: details.data.title,
+        type: "series",
+        episodes: allStreamingLinks
+      };
+      
+    } else if (details.data.type === "movie_direct" && details.data.directDownloads) {
+      // Process movie direct downloads
+      console.log("🎬 Processing", details.data.directDownloads.length, "download links");
+      
+      const movieLinks = [];
+      
+      for (const download of details.data.directDownloads) {
+        if (download.downloadUrl.includes("techyboy4u.com")) {
+          console.log("🔓 Extracting movie link:", download.title);
+          
+          const techyboyResult = await extractTechyBoyLinks(download.downloadUrl);
+          
+          if (techyboyResult.success) {
+            movieLinks.push({
+              title: download.title,
+              quality: download.quality,
+              originalUrl: download.downloadUrl,
+              extractedPath: techyboyResult.extractedPath,
+              fullUrl: techyboyResult.fullUrl,
+              instantDownload: techyboyResult.instantDownload,
+              resumeCloud: techyboyResult.resumeCloud,
+              cloudResumeDownload: techyboyResult.cloudResumeDownload
+            });
+          }
+        }
+      }
+      
+      return {
+        title: details.data.title,
+        type: "movie",
+        downloads: movieLinks
+      };
+    }
+    
+  } catch (error) {
+    console.error("❌ Error:", error.message);
+    throw error;
+  }
+}
+
+// Usage examples:
+
+// Example 1: Extract TV series streaming links
+getStreamingLinks("Loki Season 1")
+  .then(result => {
+    console.log("✅ Extraction complete!");
+    console.log("Title:", result.title);
+    console.log("Type:", result.type);
+    
+    if (result.type === "series") {
+      result.episodes.forEach(episode => {
+        console.log(\`Episode \${episode.episodeNumber}:\`);
+        console.log("  Original URL:", episode.originalUrl);
+        console.log("  Extracted Path:", episode.extractedPath);
+        console.log("  Full URL:", episode.fullUrl);
+        console.log("  Instant Download:", episode.streamingLinks[0] || "None");
+        console.log("  Resume Cloud:", episode.resumeCloudLinks[0] || "None");
+        console.log("  Cloud Resume Download:", episode.cloudResumeDownload || "None");
+      });
+    }
+  })
+  .catch(console.error);
+
+// Example 2: Extract movie download links
+getStreamingLinks("Avengers Endgame")
+  .then(result => {
+    if (result.type === "movie") {
+      result.downloads.forEach(download => {
+        console.log(\`\${download.title} (\${download.quality}):\`);
+        console.log("  Instant Download:", download.instantDownload);
+        console.log("  Resume Cloud:", download.resumeCloud);
+        console.log("  Cloud Resume Download:", download.cloudResumeDownload);
+      });
+    }
+  })
+  .catch(console.error);
+
+// Example 3: Direct TechyBoy4U URL extraction
+async function directTechyBoyExtraction() {
+  const techyboyUrl = "https://techyboy4u.com/?id=bUlrRTVoTUNjRGtnd2VQMzY1...";
   
-  // Step 3: Extract HubCloud links from HubDrive
-  const hubdriveResponse = await fetch("${baseUrl}/api/hdhub4u/hubdrive?url=" + encodeURIComponent(hubdriveUrl), {
-    headers: {
-      "x-api-key": "YOUR_API_KEY",
-      "Content-Type": "application/json"
-    }
-  });
-  const hubdriveData = await hubdriveResponse.json();
+  console.log("🔓 Extracting from TechyBoy4U URL...");
   
-  // Step 4: Get direct download links from HubCloud
-  const hubcloudUrl = hubdriveData.data.hubcloudLinks[0].url;
-  const hubcloudResponse = await fetch("${baseUrl}/api/hubcloud?url=" + encodeURIComponent(hubcloudUrl), {
-    headers: {
-      "x-api-key": "YOUR_API_KEY",
-      "Content-Type": "application/json"
+  const result = await extractTechyBoyLinks(techyboyUrl);
+  
+  if (result.success) {
+    console.log("✅ Extraction successful!");
+    console.log("Original URL:", result.fileUrl);
+    console.log("Extracted Path:", result.extractedPath);
+    console.log("Full URL:", result.fullUrl);
+    console.log("Instant Download:", result.instantDownload);
+    console.log("Resume Cloud:", result.resumeCloud);
+    console.log("Cloud Resume Download:", result.cloudResumeDownload);
+  } else {
+    console.log("❌ Extraction failed:", result.error);
+  }
+}
+
+// Example 4: Batch processing multiple episodes
+async function batchProcessEpisodes(episodes) {
+  const results = [];
+  
+  for (let i = 0; i < episodes.length; i++) {
+    const episode = episodes[i];
+    console.log(\`Processing episode \${i + 1}/\${episodes.length}: \${episode.episode}\`);
+    
+    try {
+      const result = await extractTechyBoyLinks(episode.techyboyUrl);
+      results.push({
+        ...episode,
+        extraction: result
+      });
+      
+      // Progress indicator
+      const progress = Math.round(((i + 1) / episodes.length) * 100);
+      console.log(\`Progress: \${progress}%\`);
+      
+    } catch (error) {
+      console.error(\`Failed to process \${episode.episode}:\`, error.message);
+      results.push({
+        ...episode,
+        extraction: { success: false, error: error.message }
+      });
     }
-  });
-  const hubcloudData = await hubcloudResponse.json();
-  console.log(hubcloudData.links); // Direct download URLs
-}`;
+    
+    // Rate limiting delay
+    if (i < episodes.length - 1) {
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    }
+  }
+  
+  return results;
+}
+
+// Example 5: Error handling and retry logic
+async function extractWithRetry(url, maxRetries = 3) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(\`Attempt \${attempt}/\${maxRetries} for URL: \${url}\`);
+      
+      const result = await extractTechyBoyLinks(url);
+      
+      if (result.success) {
+        console.log("✅ Success on attempt", attempt);
+        return result;
+      } else {
+        throw new Error(result.error || "Extraction failed");
+      }
+      
+    } catch (error) {
+      console.log(\`❌ Attempt \${attempt} failed:\`, error.message);
+      
+      if (attempt === maxRetries) {
+        throw error;
+      }
+      
+      // Exponential backoff
+      const delay = Math.pow(2, attempt) * 1000;
+      console.log(\`⏳ Waiting \${delay}ms before retry...\`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+}
+
+// TechyBoy4U URL Patterns:
+// 1. Standard encrypted URL: https://techyboy4u.com/?id=bUlrRTVoTUNjRGtnd2VQMzY1...
+// 2. Alternative format: https://techyboy4u.com/decrypt/?token=...
+// 3. Direct redirect: https://techyboy4u.com/r?key=...&id=...
+
+// Expected Response Format:
+/*
+{
+  "success": true,
+  "fileUrl": "https://driveleech.net/file/COKBFSVUlhWIkzfHJPUf",
+  "extractedPath": "/file/COKBFSVUlhWIkzfHJPUf",
+  "fullUrl": "https://driveleech.net/file/COKBFSVUlhWIkzfHJPUf",
+  "instantDownload": "https://video-leech.pro/?url=...",
+  "resumeCloud": "https://driveleech.net/zfile/...",
+  "cloudResumeDownload": "https://worker-patient-base-84eb.mejehe3114.workers.dev/..."
+}
+*/`;
 
       case "python":
-        return `# HDHub4u API Workflow Example
+        return `# HDHub4u + TechyBoy4U Complete Extraction Workflow
 import requests
+import time
+import json
+from urllib.parse import quote
 
-headers = {
-    "x-api-key": "YOUR_API_KEY",
-    "Content-Type": "application/json"
+class HDHub4uExtractor:
+    def __init__(self, api_key):
+        self.api_key = api_key
+        self.base_url = "${baseUrl}"
+        self.headers = {
+            "x-api-key": api_key,
+            "Content-Type": "application/json"
+        }
+    
+    def search_content(self, query):
+        """Search for content on HDHub4u"""
+        url = f"{self.base_url}/api/hdhub4u?search={quote(query)}"
+        response = requests.get(url, headers=self.headers)
+        return response.json()
+    
+    def get_content_details(self, post_url):
+        """Get content details from HDHub4u post URL"""
+        url = f"{self.base_url}/api/hdhub4u/details?url={quote(post_url)}"
+        response = requests.get(url, headers=self.headers)
+        return response.json()
+    
+    def extract_techyboy_links(self, techyboy_url):
+        """Extract streaming links from TechyBoy4U URL"""
+        url = f"{self.base_url}/api/uhdmovies/drive?url={quote(techyboy_url)}"
+        response = requests.get(url, headers=self.headers)
+        return response.json()
+    
+    def get_streaming_links(self, search_query):
+        """Complete workflow to get streaming links"""
+        print(f"🔍 Searching for: {search_query}")
+        
+        // Search for content
+        search_results = self.search_content(search_query);
+        if (!search_results.success || !search_results.data.items.length) {
+          throw new Error("No search results found");
+        }
+        
+        console.log("📚 Found", searchResults.data.items.length, "results");
+        const firstResult = searchResults.data.items[0];
+        console.log("📖 Processing:", firstResult.title);
+        
+        // Get content details
+        const details = await getContentDetails(firstResult.postUrl);
+        if (!details.success) {
+          throw new Error("Failed to get content details");
+        }
+        
+        console.log("🎬 Content type:", details.data.type);
+        
+        if (details.data.type === "series" && details.data.episodes) {
+          // Process TV series episodes
+          console.log("📺 Processing", details.data.episodes.length, "episodes");
+          
+          const allStreamingLinks = [];
+          
+          for (const episode of details.data.episodes) {
+            if (episode.techyboyUrl) {
+              console.log("🔓 Extracting links for:", episode.episode);
+              
+              // Extract TechyBoy4U links
+              const techyboyResult = await extractTechyBoyLinks(episode.techyboyUrl);
+              
+              if (techyboyResult.success) {
+                allStreamingLinks.push({
+                  episode: episode.episode,
+                  episodeNumber: episode.episodeNumber,
+                  originalUrl: episode.techyboyUrl,
+                  extractedPath: techyboyResult.extractedPath,
+                  fullUrl: techyboyResult.fullUrl,
+                  streamingLinks: techyboyResult.instantDownload ? [techyboyResult.instantDownload] : [],
+                  resumeCloudLinks: techyboyResult.resumeCloud ? [techyboyResult.resumeCloud] : [],
+                  cloudResumeDownload: techyboyResult.cloudResumeDownload
+                });
+              }
+              
+              // Add delay to avoid rate limiting
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+          }
+          
+          return {
+            title: details.data.title,
+            type: "series",
+            episodes: allStreamingLinks
+          };
+          
+        } else if (details.data.type === "movie_direct" && details.data.directDownloads) {
+          // Process movie direct downloads
+          console.log("🎬 Processing", details.data.directDownloads.length, "download links");
+          
+          const movieLinks = [];
+          
+          for (const download of details.data.directDownloads) {
+            if (download.downloadUrl.includes("techyboy4u.com")) {
+              console.log("🔓 Extracting movie link:", download.title);
+              
+              const techyboyResult = await extractTechyBoyLinks(download.downloadUrl);
+              
+              if (techyboyResult.success) {
+                movieLinks.push({
+                  title: download.title,
+                  quality: download.quality,
+                  originalUrl: download.downloadUrl,
+                  extractedPath: techyboyResult.extractedPath,
+                  fullUrl: techyboyResult.fullUrl,
+                  instantDownload: techyboyResult.instantDownload,
+                  resumeCloud: techyboyResult.resumeCloud,
+                  cloudResumeDownload: techyboyResult.cloudResumeDownload
+                });
+              }
+            }
+          }
+          
+          return {
+            title: details.data.title,
+            type: "movie",
+            downloads: movieLinks
+          };
+        }
+        
+      } catch (error) {
+        console.error("❌ Error:", error.message);
+        throw error;
+      }
+    }
+    
+    // Usage examples:
+    
+    // Example 1: Extract TV series streaming links
+    getStreamingLinks("Loki Season 1")
+      .then(result => {
+        console.log("✅ Extraction complete!");
+        console.log("Title:", result.title);
+        console.log("Type:", result.type);
+        
+        if (result.type === "series") {
+          result.episodes.forEach(episode => {
+            console.log(\`Episode \${episode.episodeNumber}:\`);
+            console.log("  Original URL:", episode.originalUrl);
+            console.log("  Extracted Path:", episode.extractedPath);
+            console.log("  Full URL:", episode.fullUrl);
+            console.log("  Instant Download:", episode.streamingLinks[0] || "None");
+            console.log("  Resume Cloud:", episode.resumeCloudLinks[0] || "None");
+            console.log("  Cloud Resume Download:", episode.cloudResumeDownload || "None");
+          });
+        }
+      })
+      .catch(console.error);
+    
+    // Example 2: Extract movie download links
+    getStreamingLinks("Avengers Endgame")
+      .then(result => {
+        if (result.type === "movie") {
+          result.downloads.forEach(download => {
+            console.log(\`\${download.title} (\${download.quality}):\`);
+            console.log("  Instant Download:", download.instantDownload);
+            console.log("  Resume Cloud:", download.resumeCloud);
+            console.log("  Cloud Resume Download:", download.cloudResumeDownload);
+          });
+        }
+      })
+      .catch(console.error);
+    
+    // Example 3: Direct TechyBoy4U URL extraction
+    async function directTechyBoyExtraction() {
+      const techyboyUrl = "https://techyboy4u.com/?id=bUlrRTVoTUNjRGtnd2VQMzY1...";
+      
+      console.log("🔓 Extracting from TechyBoy4U URL...");
+      
+      const result = await extractTechyBoyLinks(techyboyUrl);
+      
+      if (result.success) {
+        console.log("✅ Extraction successful!");
+        console.log("Original URL:", result.fileUrl);
+        console.log("Extracted Path:", result.extractedPath);
+        console.log("Full URL:", result.fullUrl);
+        console.log("Instant Download:", result.instantDownload);
+        console.log("Resume Cloud:", result.resumeCloud);
+        console.log("Cloud Resume Download:", result.cloudResumeDownload);
+      } else {
+        console.log("❌ Extraction failed:", result.error);
+      }
+    }
+    
+    // Example 4: Batch processing multiple episodes
+    async function batchProcessEpisodes(episodes) {
+      const results = [];
+      
+      for (let i = 0; i < episodes.length; i++) {
+        const episode = episodes[i];
+        console.log(\`Processing episode \${i + 1}/\${episodes.length}: \${episode.episode}\`);
+        
+        try {
+          const result = await extractTechyBoyLinks(episode.techyboyUrl);
+          results.push({
+            ...episode,
+            extraction: result
+          });
+          
+          // Progress indicator
+          const progress = Math.round(((i + 1) / episodes.length) * 100);
+          console.log(\`Progress: \${progress}%\`);
+          
+        } catch (error) {
+          console.error(\`Failed to process \${episode.episode}:\`, error.message);
+          results.push({
+            ...episode,
+            extraction: { success: false, error: error.message }
+          });
+        }
+        
+        // Rate limiting delay
+        if (i < episodes.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+      }
+      
+      return results;
+    }
+    
+    // Example 5: Error handling and retry logic
+    async function extractWithRetry(url, maxRetries = 3) {
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          console.log(\`Attempt \${attempt}/\${maxRetries} for URL: \${url}\`);
+          
+          const result = await extractTechyBoyLinks(url);
+          
+          if (result.success) {
+            console.log("✅ Success on attempt", attempt);
+            return result;
+          } else {
+            throw new Error(result.error || "Extraction failed");
+          }
+          
+        } catch (error) {
+          console.log(\`❌ Attempt \${attempt} failed:\`, error.message);
+          
+          if (attempt === maxRetries) {
+            throw error;
+          }
+          
+          // Exponential backoff
+          const delay = Math.pow(2, attempt) * 1000;
+          console.log(\`⏳ Waiting \${delay}ms before retry...\`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
+    }
+    
+    // TechyBoy4U URL Patterns:
+    // 1. Standard encrypted URL: https://techyboy4u.com/?id=bUlrRTVoTUNjRGtnd2VQMzY1...
+    // 2. Alternative format: https://techyboy4u.com/decrypt/?token=...
+    // 3. Direct redirect: https://techyboy4u.com/r?key=...&id=...
+    
+    // Expected Response Format:
+    /*
+    {
+      "success": true,
+      "fileUrl": "https://driveleech.net/file/COKBFSVUlhWIkzfHJPUf",
+      "extractedPath": "/file/COKBFSVUlhWIkzfHJPUf",
+      "fullUrl": "https://driveleech.net/file/COKBFSVUlhWIkzfHJPUf",
+      "instantDownload": "https://video-leech.pro/?url=...",
+      "resumeCloud": "https://driveleech.net/zfile/...",
+      "cloudResumeDownload": "https://worker-patient-base-84eb.mejehe3114.workers.dev/..."
+    }
+    */`;
+
+      case "curl":
+        return `#!/bin/bash
+
+# HDHub4u + TechyBoy4U Complete Extraction Workflow
+
+API_KEY="YOUR_API_KEY"
+BASE_URL="${baseUrl}"
+
+# Function to make API calls
+call_api() {
+    local endpoint="$1"
+    local params="$2"
+    
+    curl -s -X GET \\
+        "\${BASE_URL}\${endpoint}?\${params}" \\
+        -H "x-api-key: \${API_KEY}" \\
+        -H "Content-Type: application/json"
+}
+
+# Function to extract JSON value
+extract_json_value() {
+    local json="$1"
+    local key="$2"
+    echo "$json" | grep -o "\\"$key\\":\\s*\\"[^\\"]\\+"" | sed "s/\\"$key\\":\\s*\\"//g" | sed 's/"//g'
 }
 
 # Step 1: Search for content
-search_response = requests.get("${baseUrl}/api/hdhub4u?search=avengers", headers=headers)
-search_data = search_response.json()
-print(search_data["data"]["items"])  # Search results
+echo "🔍 Searching for content..."
+SEARCH_QUERY="Loki Season 1"
+SEARCH_RESULT=$(call_api "/api/hdhub4u" "search=$(echo "$SEARCH_QUERY" | sed 's/ /%20/g')")
+
+echo "Search Result:"
+echo "$SEARCH_RESULT" | jq .
+
+# Extract first result's post URL
+POST_URL=$(echo "$SEARCH_RESULT" | jq -r '.data.items[0].postUrl')
+echo "📖 Processing post URL: $POST_URL"
 
 # Step 2: Get content details
-post_url = search_data["data"]["items"][0]["postUrl"]
-details_response = requests.get(f"${baseUrl}/api/hdhub4u/details?url={post_url}", headers=headers)
-details_data = details_response.json()
+echo "🎬 Getting content details..."
+DETAILS_RESULT=$(call_api "/api/hdhub4u/details" "url=$(echo "$POST_URL" | sed 's/&/%26/g' | sed 's/:/%3A/g' | sed 's/\//%2F/g')")
 
-if details_data["data"]["type"] == "series":
-    # For TV Series - get streaming links
-    episode_url = details_data["data"]["episodes"][0]["episodeUrl"]
-    stream_response = requests.get(f"${baseUrl}/api/hdhub4u/stream?url={episode_url}", headers=headers)
-    stream_data = stream_response.json()
-    print(stream_data["data"]["streamLinks"])  # Direct streaming URLs
-elif details_data["data"]["type"] == "movie_direct":
-    # For Movies with direct downloads
-    hubdrive_url = details_data["data"]["directDownloads"][0]["downloadUrl"]
+echo "Details Result:"
+echo "$DETAILS_RESULT" | jq .
+
+# Extract content type
+CONTENT_TYPE=$(echo "$DETAILS_RESULT" | jq -r '.data.type')
+echo "📺 Content type: $CONTENT_TYPE"
+
+# Step 3: Process based on content type
+if [ "$CONTENT_TYPE" = "series" ]; then
+    echo "📺 Processing TV series episodes..."
     
-    # Step 3: Extract HubCloud links from HubDrive
-    hubdrive_response = requests.get(f"${baseUrl}/api/hdhub4u/hubdrive?url={hubdrive_url}", headers=headers)
-    hubdrive_data = hubdrive_response.json()
+    # Extract first episode's TechyBoy4U URL
+    TECHYBOY_URL=$(echo "$DETAILS_RESULT" | jq -r '.data.episodes[0].techyboyUrl')
+    echo "🔓 Extracting from TechyBoy4U URL: $TECHYBOY_URL"
     
-    # Step 4: Get direct download links from HubCloud
-    hubcloud_url = hubdrive_data["data"]["hubcloudLinks"][0]["url"]
-    hubcloud_response = requests.get(f"${baseUrl}/api/hubcloud?url={hubcloud_url}", headers=headers)
-    hubcloud_data = hubcloud_response.json()
-    print(hubcloud_data["links"])  # Direct download URLs`;
+    # Extract TechyBoy4U streaming links
+    TECHYBOY_RESULT=$(call_api "/api/uhdmovies/drive" "url=$(echo "$TECHYBOY_URL" | sed 's/&/%26/g' | sed 's/:/%3A/g' | sed 's/\//%2F/g')")
+    
+    echo "TechyBoy4U Extraction Result:"
+    echo "$TECHYBOY_RESULT" | jq .
+    
+    # Extract streaming links
+    INSTANT_DOWNLOAD=$(echo "$TECHYBOY_RESULT" | jq -r '.instantDownload // "None"')
+    RESUME_CLOUD=$(echo "$TECHYBOY_RESULT" | jq -r '.resumeCloud // "None"')
+    CLOUD_RESUME_DOWNLOAD=$(echo "$TECHYBOY_RESULT" | jq -r '.cloudResumeDownload // "None"')
+    
+    echo "✅ Extracted streaming links:"
+    echo "  Instant Download: $INSTANT_DOWNLOAD"
+    echo "  Resume Cloud: $RESUME_CLOUD"
+    echo "  Cloud Resume Download: $CLOUD_RESUME_DOWNLOAD"
+    
+elif [ "$CONTENT_TYPE" = "movie_direct" ]; then
+    echo "🎬 Processing movie direct downloads..."
+    
+    # Extract first download's TechyBoy4U URL
+    TECHYBOY_URL=$(echo "$DETAILS_RESULT" | jq -r '.data.directDownloads[] | select(.downloadUrl | contains("techyboy4u.com")) | .downloadUrl' | head -1)
+    echo "🔓 Extracting from TechyBoy4U URL: $TECHYBOY_URL"
+    
+    # Extract TechyBoy4U streaming links
+    TECHYBOY_RESULT=$(call_api "/api/uhdmovies/drive" "url=$(echo "$TECHYBOY_URL" | sed 's/&/%26/g' | sed 's/:/%3A/g' | sed 's/\//%2F/g')")
+    
+    echo "TechyBoy4U Extraction Result:"
+    echo "$TECHYBOY_RESULT" | jq .
+    
+    # Extract download links
+    INSTANT_DOWNLOAD=$(echo "$TECHYBOY_RESULT" | jq -r '.instantDownload // "None"')
+    RESUME_CLOUD=$(echo "$TECHYBOY_RESULT" | jq -r '.resumeCloud // "None"')
+    CLOUD_RESUME_DOWNLOAD=$(echo "$TECHYBOY_RESULT" | jq -r '.cloudResumeDownload // "None"')
+    
+    echo "✅ Extracted download links:"
+    echo "  Instant Download: $INSTANT_DOWNLOAD"
+    echo "  Resume Cloud: $RESUME_CLOUD"
+    echo "  Cloud Resume Download: $CLOUD_RESUME_DOWNLOAD"
+else
+    echo "❌ Unsupported content type: $CONTENT_TYPE"
+fi
 
-      case "curl":
-        return `# HDHub4u API Workflow Example
+# Direct TechyBoy4U URL extraction example
+echo ""
+echo "🔓 Direct TechyBoy4U URL extraction example:"
+DIRECT_TECHYBOY_URL="https://techyboy4u.com/?id=bUlrRTVoTUNjRGtnd2VQMzY1..."
 
-# Step 1: Search for content
-curl -X GET \\
-  "${baseUrl}/api/hdhub4u?search=avengers" \\
-  -H "x-api-key: YOUR_API_KEY" \\
-  -H "Content-Type: application/json"
+DIRECT_RESULT=$(call_api "/api/uhdmovies/drive" "url=$(echo "$DIRECT_TECHYBOY_URL" | sed 's/&/%26/g' | sed 's/:/%3A/g' | sed 's/\//%2F/g')")
 
-# Step 2: Get content details (use postUrl from search results)
-curl -X GET \\
-  "${baseUrl}/api/hdhub4u/details?url=POST_URL_HERE" \\
-  -H "x-api-key: YOUR_API_KEY" \\
-  -H "Content-Type: application/json"
+echo "Direct Extraction Result:"
+echo "$DIRECT_RESULT" | jq .
 
-# For TV Series - Step 3: Get streaming links
-curl -X GET \\
-  "${baseUrl}/api/hdhub4u/stream?url=EPISODE_URL_HERE" \\
-  -H "x-api-key: YOUR_API_KEY" \\
-  -H "Content-Type: application/json"
+# Batch processing example
+echo ""
+echo "📦 Batch processing example:"
 
-# For Movies - Step 3: Extract HubCloud links
-curl -X GET \\
-  "${baseUrl}/api/hdhub4u/hubdrive?url=HUBDRIVE_URL_HERE" \\
-  -H "x-api-key: YOUR_API_KEY" \\
-  -H "Content-Type: application/json"
+# Function to process multiple TechyBoy4U URLs
+process_batch() {
+    local urls=("$@")
+    local total=${"#urls[@]"}
+    
+    for i, url in enumerate(urls):
+        current = i + 1
+        print(f"Processing {current}/{total}: {url}")
 
-# For Movies - Step 4: Get direct download links
-curl -X GET \\
-  "${baseUrl}/api/hubcloud?url=HUBCLOUD_URL_HERE" \\
-  -H "x-api-key: YOUR_API_KEY" \\
-  -H "Content-Type: application/json"`;
+        result = call_api("/api/uhdmovies/drive", f"url={quote(url)}")
+        success = result.get("success", False)
+
+        if success:
+            print(f"✅ Success: {result.get('fullUrl')}")
+        else:
+            print(f"❌ Failed: {result.get('error', 'Unknown error')}")
+
+        # Progress indicator
+        progress = int((current * 100) / total)
+        print(f"Progress: {progress}%")
+
+        # Rate limiting
+        if current < total:
+            time.sleep(2)
+}
+
+# Example batch URLs
+BATCH_URLS=(
+    "https://techyboy4u.com/?id=bUlrRTVoTUNjRGtnd2VQMzY1..."
+    "https://techyboy4u.com/?id=anotherEncryptedId..."
+    "https://techyboy4u.com/?id=yetAnotherEncryptedId..."
+)
+
+process_batch "${"BATCH_URLS[@]"}"
+
+# Error handling with retry example
+echo ""
+echo "🔄 Retry logic example:"
+
+retry_extraction() {
+    local url="$1"
+    local max_retries=3
+    
+    for attempt in $(seq 1 $max_retries); do
+        echo "Attempt $attempt/$max_retries for: $url"
+        
+        local result=$(call_api "/api/uhdmovies/drive" "url=$(echo "$url" | sed 's/&/%26/g' | sed 's/:/%3A/g' | sed 's/\//%2F/g')")
+        local success=$(echo "$result" | jq -r '.success')
+        
+        if [ "$success" = "true" ]; then
+            echo "✅ Success on attempt $attempt"
+            echo "$result" | jq .
+            return 0
+        else
+            echo "❌ Attempt $attempt failed: $(echo "$result" | jq -r '.error // "Unknown error"')"
+            
+            if [ $attempt -eq $max_retries ]; then
+                echo "❌ All attempts failed"
+                return 1
+            fi
+            
+            # Exponential backoff
+            local delay=$((2 ** attempt))
+            echo "⏳ Waiting ${"delay"}s before retry..."
+            sleep $delay
+        fi
+    done
+}
+
+# Test retry function
+retry_extraction "https://techyboy4u.com/?id=testRetryUrl..."
+
+echo ""
+echo "📋 TechyBoy4U URL Patterns:"
+echo "1. Standard encrypted URL: https://techyboy4u.com/?id=bUlrRTVoTUNjRGtnd2VQMzY1..."
+echo "2. Alternative format: https://techyboy4u.com/decrypt/?token=..."
+echo "3. Direct redirect: https://techyboy4u.com/r?key=...&id=..."
+echo ""
+echo "📊 Expected Response Format:"
+echo '{
+  "success": true,
+  "fileUrl": "https://driveleech.net/file/COKBFSVUlhWIkzfHJPUf",
+  "extractedPath": "/file/COKBFSVUlhWIkzfHJPUf",
+  "fullUrl": "https://driveleech.net/file/COKBFSVUlhWIkzfHJPUf",
+  "instantDownload": "https://video-leech.pro/?url=...",
+  "resumeCloud": "https://driveleech.net/zfile/...",
+  "cloudResumeDownload": "https://worker-patient-base-84eb.mejehe3114.workers.dev/..."
+}'`;
 
       default:
         return "";
