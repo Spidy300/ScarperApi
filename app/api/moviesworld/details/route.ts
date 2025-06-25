@@ -9,6 +9,12 @@ interface TelegramLink {
   streamUrl: string;
 }
 
+interface SeasonData {
+  season_number: number;
+  episodes: any[];
+  telegram: TelegramLink[];
+}
+
 interface MoviesWorldDetailItem {
   _id: string;
   tmdb_id: number;
@@ -26,6 +32,9 @@ interface MoviesWorldDetailItem {
   rip: string;
   telegram: TelegramLink[];
   type: string;
+  total_seasons?: number;
+  total_episodes?: number;
+  seasons?: SeasonData[];
 }
 
 interface MoviesWorldDetailResponse {
@@ -69,6 +78,48 @@ async function fetchMoviesWorldDetails(id: string): Promise<MoviesWorldDetailIte
         ...link,
         streamUrl: `https://moviesworld738-e52c71f18b14.herokuapp.com/dl/${link.id}/${encodeURIComponent(link.name)}`
       }));
+    }
+
+    // If it's a TV show with seasons, fetch all seasons
+    if (data.total_seasons && data.total_seasons > 0) {
+      const seasons: SeasonData[] = [];
+      
+      for (let seasonNum = 1; seasonNum <= data.total_seasons; seasonNum++) {
+        try {
+          const seasonUrl = `https://moviesworld738-e52c71f18b14.herokuapp.com/api/id/${id}?season_number=${seasonNum}`;
+          const seasonResponse = await fetch(seasonUrl, {
+            cache: 'no-cache',
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+            },
+            signal: AbortSignal.timeout(10000) // 10 second timeout for season fetch
+          });
+
+          if (seasonResponse.ok) {
+            const seasonData = await seasonResponse.json();
+            
+            // Add stream URLs to season telegram links
+            if (seasonData.telegram && Array.isArray(seasonData.telegram)) {
+              seasonData.telegram = seasonData.telegram.map((link: any) => ({
+                ...link,
+                streamUrl: `https://moviesworld738-e52c71f18b14.herokuapp.com/dl/${link.id}/${encodeURIComponent(link.name)}`
+              }));
+            }
+
+            seasons.push({
+              season_number: seasonNum,
+              episodes: seasonData.episodes || [],
+              telegram: seasonData.telegram || []
+            });
+          }
+        } catch (seasonError) {
+          console.log(`Failed to fetch season ${seasonNum}:`, seasonError);
+        }
+      }
+      
+      data.seasons = seasons;
     }
 
     console.log(`Successfully fetched details for: ${data.title}`);
