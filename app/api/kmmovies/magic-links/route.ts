@@ -28,22 +28,57 @@ async function getMagicLinksData(url: string) {
     const $ = load(html);
     const links = [];
 
-    // Extract Watch Online link and extract the actual video URL
-    const watchOnlineLink = $('a[href*="zipzap.lol/nf/index.php"]:contains("WATCH ONLINE")').attr('href');
-    if (watchOnlineLink) {
-      try {
-        const url = new URL(watchOnlineLink);
-        const videoUrl = url.searchParams.get('videoUrl');
-        if (videoUrl) {
-          links.push({
-            type: 'stream',
-            provider: 'Watch Online',
-            url: videoUrl,
-            quality: 'Stream',
-            description: 'Direct video stream URL'
-          });
-        } else {
-          // Fallback to original URL if videoUrl parameter not found
+    // Check if this page has episodes structure
+    const hasEpisodesSection = $('.episodes').length > 0;
+    
+    if (hasEpisodesSection) {
+      // Handle episodes structure - extract only Hubcloud links
+      $('.episodes article.episode').each((index, element) => {
+        const $episode = $(element);
+        const episodeTitle = $episode.find('.episode-title span').text().trim();
+        const episodeNumber = episodeTitle.replace('Episode ', '') || (index + 1).toString();
+        
+        // Extract only Hubcloud links for this episode
+        $episode.find('a.download-button.hubcloud').each((_, linkElement) => {
+          const href = $(linkElement).attr('href');
+          if (href) {
+            links.push({
+              type: 'hubcloud',
+              provider: 'HUBCLOUD',
+              url: href,
+              quality: 'Stream',
+              description: `Hubcloud streaming link for Episode ${episodeNumber}`,
+              episodeNumber: episodeNumber
+            });
+          }
+        });
+      });
+    } else {
+      // Original movie structure - existing code
+      // Extract Watch Online link and extract the actual video URL
+      const watchOnlineLink = $('a[href*="zipzap.lol/nf/index.php"]:contains("WATCH ONLINE")').attr('href');
+      if (watchOnlineLink) {
+        try {
+          const url = new URL(watchOnlineLink);
+          const videoUrl = url.searchParams.get('videoUrl');
+          if (videoUrl) {
+            links.push({
+              type: 'stream',
+              provider: 'Watch Online',
+              url: videoUrl,
+              quality: 'Stream',
+              description: 'Direct video stream URL'
+            });
+          } else {
+            links.push({
+              type: 'stream',
+              provider: 'Watch Online',
+              url: watchOnlineLink,
+              quality: 'Stream',
+              description: 'Watch directly in browser'
+            });
+          }
+        } catch (urlError) {
           links.push({
             type: 'stream',
             provider: 'Watch Online',
@@ -52,33 +87,32 @@ async function getMagicLinksData(url: string) {
             description: 'Watch directly in browser'
           });
         }
-      } catch (urlError) {
-        // If URL parsing fails, use original URL
-        links.push({
-          type: 'stream',
-          provider: 'Watch Online',
-          url: watchOnlineLink,
-          quality: 'Stream',
-          description: 'Watch directly in browser'
-        });
       }
-    }
 
-    // Extract SkyTech links and clean the URL
-    const skytechLink = $('a[href*="skytech.works/nf/index.php"]:contains("WATCH ONLINE")').attr('href');
-    if (skytechLink) {
-      try {
-        const url = new URL(skytechLink);
-        const videoUrl = url.searchParams.get('videoUrl');
-        if (videoUrl) {
-          links.push({
-            type: 'stream',
-            provider: 'SkyTech',
-            url: videoUrl,
-            quality: 'Stream',
-            description: 'Direct video stream URL from SkyTech'
-          });
-        } else {
+      // Extract SkyTech links and clean the URL
+      const skytechLink = $('a[href*="skytech.works/nf/index.php"]:contains("WATCH ONLINE")').attr('href');
+      if (skytechLink) {
+        try {
+          const url = new URL(skytechLink);
+          const videoUrl = url.searchParams.get('videoUrl');
+          if (videoUrl) {
+            links.push({
+              type: 'stream',
+              provider: 'SkyTech',
+              url: videoUrl,
+              quality: 'Stream',
+              description: 'Direct video stream URL from SkyTech'
+            });
+          } else {
+            links.push({
+              type: 'stream',
+              provider: 'SkyTech',
+              url: skytechLink,
+              quality: 'Stream',
+              description: 'SkyTech stream'
+            });
+          }
+        } catch (urlError) {
           links.push({
             type: 'stream',
             provider: 'SkyTech',
@@ -87,118 +121,112 @@ async function getMagicLinksData(url: string) {
             description: 'SkyTech stream'
           });
         }
-      } catch (urlError) {
+      }
+
+      // Extract HubCloud link
+      const hubcloudLink = $('a[href*="hubcloud"]:contains("HUBCLOUD")').attr('href');
+      if (hubcloudLink) {
         links.push({
-          type: 'stream',
-          provider: 'SkyTech',
-          url: skytechLink,
+          type: 'hubcloud',
+          provider: 'HUBCLOUD',
+          url: hubcloudLink,
           quality: 'Stream',
-          description: 'SkyTech stream'
+          description: 'HubCloud streaming link'
         });
       }
-    }
 
-    // Extract HubCloud link
-    const hubcloudLink = $('a[href*="hubcloud"]:contains("HUBCLOUD")').attr('href');
-    if (hubcloudLink) {
-      links.push({
-        type: 'hubcloud',
-        provider: 'HUBCLOUD',
-        url: hubcloudLink,
-        quality: 'Stream',
-        description: 'HubCloud streaming link'
-      });
-    }
-
-    // Extract GDFLIX link - keep as download type for processing
-    const gdflixLink = $('a[href*="gdflix"]:contains("GDFLIX")').attr('href');
-    if (gdflixLink) {
-      links.push({
-        type: 'download',
-        provider: 'GDFLIX',
-        url: gdflixLink,
-        quality: 'Download',
-        description: 'Google Drive based download (will be processed for direct links)'
-      });
-    }
-
-    // Extract GDTOT link - but we'll filter this out in the frontend
-    const gdtotLink = $('a[href*="gdtot"]:contains("GDTOT")').attr('href');
-    if (gdtotLink) {
-      links.push({
-        type: 'download',
-        provider: 'GDTOT',
-        url: gdtotLink,
-        quality: 'Download',
-        description: 'Google Drive based download'
-      });
-    }
-
-    // Also look for any other download buttons as fallback
-    $('.download-button').each((index, element) => {
-      const $link = $(element);
-      const href = $link.attr('href');
-      const text = $link.text().trim();
-      
-      if (href && text && !links.some(link => link.url === href)) {
-        // Check if it's one of our target providers
-        if (text.includes('WATCH ONLINE') || text.includes('GDFLIX') || text.includes('GDTOT') || text.includes('HUBCLOUD')) {
-          let provider = 'Unknown';
-          let type = 'download';
-          let finalUrl = href;
-          
-          if (text.includes('WATCH ONLINE')) {
-            provider = 'Watch Online';
-            type = 'stream';
-            // Extract video URL from zipzap.lol or skytech parameter if it's a watch online link
-            if (href.includes('zipzap.lol/nf/index.php')) {
-              try {
-                const url = new URL(href);
-                const videoUrl = url.searchParams.get('videoUrl');
-                if (videoUrl) {
-                  finalUrl = videoUrl;
-                }
-              } catch (urlError) {
-                // Keep original URL if parsing fails
-              }
-            } else if (href.includes('skytech.works/nf/index.php')) {
-              try {
-                const url = new URL(href);
-                const videoUrl = url.searchParams.get('videoUrl');
-                if (videoUrl) {
-                  finalUrl = videoUrl;
-                  provider = 'SkyTech';
-                }
-              } catch (urlError) {
-                // Keep original URL if parsing fails
-              }
-            }
-          } else if (text.includes('GDFLIX')) {
-            provider = 'GDFLIX';
-            type = 'download'; // Keep as download for processing
-          } else if (text.includes('GDTOT')) {
-            provider = 'GDTOT';
-          } else if (text.includes('HUBCLOUD')) {
-            provider = 'HUBCLOUD';
-            type = 'hubcloud';
-          }
-          
-          links.push({
-            type,
-            provider,
-            url: finalUrl,
-            quality: type === 'stream' ? 'Stream' : 'Download',
-            description: text
-          });
-        }
+      // Extract GDFLIX link - keep as download type for processing
+      const gdflixLink = $('a[href*="gdflix"]:contains("GDFLIX")').attr('href');
+      if (gdflixLink) {
+        links.push({
+          type: 'download',
+          provider: 'GDFLIX',
+          url: gdflixLink,
+          quality: 'Download',
+          description: 'Google Drive based download (will be processed for direct links)'
+        });
       }
-    });
+
+      // Extract GDTOT link - but we'll filter this out in the frontend
+      const gdtotLink = $('a[href*="gdtot"]:contains("GDTOT")').attr('href');
+      if (gdtotLink) {
+        links.push({
+          type: 'download',
+          provider: 'GDTOT',
+          url: gdtotLink,
+          quality: 'Download',
+          description: 'Google Drive based download'
+        });
+      }
+
+      // Also look for any other download buttons as fallback
+      $('.download-button').each((index, element) => {
+        const $link = $(element);
+        const href = $link.attr('href');
+        const text = $link.text().trim();
+        
+        if (href && text && !links.some(link => link.url === href)) {
+          // Check if it's one of our target providers
+          if (text.includes('WATCH ONLINE') || text.includes('GDFLIX') || text.includes('GDTOT') || text.includes('HUBCLOUD')) {
+            let provider = 'Unknown';
+            let type = 'download';
+            let finalUrl = href;
+            
+            if (text.includes('WATCH ONLINE')) {
+              provider = 'Watch Online';
+              type = 'stream';
+              // Extract video URL from zipzap.lol or skytech parameter if it's a watch online link
+              if (href.includes('zipzap.lol/nf/index.php')) {
+                try {
+                  const url = new URL(href);
+                  const videoUrl = url.searchParams.get('videoUrl');
+                  if (videoUrl) {
+                    finalUrl = videoUrl;
+                  }
+                } catch (urlError) {
+                  // Keep original URL if parsing fails
+                }
+              } else if (href.includes('skytech.works/nf/index.php')) {
+                try {
+                  const url = new URL(href);
+                  const videoUrl = url.searchParams.get('videoUrl');
+                  if (videoUrl) {
+                    finalUrl = videoUrl;
+                    provider = 'SkyTech';
+                  }
+                } catch (urlError) {
+                  // Keep original URL if parsing fails
+                }
+              }
+            } else if (text.includes('GDFLIX')) {
+              provider = 'GDFLIX';
+              type = 'download'; // Keep as download for processing
+            } else if (text.includes('GDTOT')) {
+              provider = 'GDTOT';
+            } else if (text.includes('HUBCLOUD')) {
+              provider = 'HUBCLOUD';
+              type = 'hubcloud';
+            }
+            
+            links.push({
+              type,
+              provider,
+              url: finalUrl,
+              quality: type === 'stream' ? 'Stream' : 'Download',
+              description: text
+            });
+          }
+        }
+      });
+    }
 
     console.log(`Found ${links.length} magic links`);
     return {
       links,
       sourceUrl: url,
-      totalFound: links.length
+      totalFound: links.length,
+      hasEpisodes: hasEpisodesSection,
+      episodeCount: hasEpisodesSection ? $('.episodes article.episode').length : 0
     };
   } catch (error) {
     console.error('Error fetching magic links:', error);

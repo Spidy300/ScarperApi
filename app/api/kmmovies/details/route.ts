@@ -38,6 +38,73 @@ async function getKMmoviesDetails(url: string) {
     const title = $('h1.entry-title').text().trim() || 
                   $('title').text().split('|')[0]?.trim();
     
+    // Check if this is a series by looking for episodes section
+    const hasEpisodesSection = $('.episodes').length > 0;
+    const isSeriesPattern = /S\d+/i.test(title) || /Season/i.test(title) || hasEpisodesSection;
+    
+    // Extract episodes if this is a series
+    const episodes: Array<{
+      episodeNumber: string;
+      downloadLinks: Array<{
+        provider: string;
+        url: string;
+        type: string;
+      }>;
+    }> = [];
+
+    if (hasEpisodesSection) {
+      $('.episodes article.episode').each((index, element) => {
+        const $episode = $(element);
+        const episodeTitle = $episode.find('.episode-title span').text().trim();
+        const episodeNumber = episodeTitle.replace('Episode ', '') || (index + 1).toString();
+        
+        const episodeLinks: Array<{provider: string; url: string; type: string}> = [];
+        
+        // Extract Hubcloud links
+        $episode.find('a.download-button.hubcloud').each((_, linkElement) => {
+          const href = $(linkElement).attr('href');
+          if (href) {
+            episodeLinks.push({
+              provider: 'Hubcloud',
+              url: href,
+              type: 'hubcloud'
+            });
+          }
+        });
+        
+        // Extract Telegram links
+        $episode.find('a.download-button.telegram').each((_, linkElement) => {
+          const href = $(linkElement).attr('href');
+          if (href) {
+            episodeLinks.push({
+              provider: 'Telegram',
+              url: href,
+              type: 'telegram'
+            });
+          }
+        });
+        
+        // Extract SkyDrop links
+        $episode.find('a.download-button.skydrop').each((_, linkElement) => {
+          const href = $(linkElement).attr('href');
+          if (href) {
+            episodeLinks.push({
+              provider: 'SkyDrop',
+              url: href,
+              type: 'skydrop'
+            });
+          }
+        });
+        
+        if (episodeLinks.length > 0) {
+          episodes.push({
+            episodeNumber,
+            downloadLinks: episodeLinks
+          });
+        }
+      });
+    }
+    
     // Extract storyline from mip-movie-info section
     const storylineElement = $('.mip-movie-info h3:contains("Storyline:")');
     const storyline = storylineElement.next('p').text().trim() || 
@@ -99,105 +166,108 @@ async function getKMmoviesDetails(url: string) {
 
     const movieInfo = parseMovieInfo(movieInfoDetails);
     
-    // Extract download links from both download-buttons and download-card sections
+    // Extract download links from both download-buttons and download-card sections (for movies)
     const downloadLinks: Array<{url: string, quality: string, size: string, text: string}> = [];
     
-    // Method 1: Original download-buttons structure
-    $('.download-buttons h4').each((index, element) => {
-      const $h4 = $(element);
-      const qualityText = $h4.text().trim();
-      const $link = $h4.next('p').find('a');
-      const href = $link.attr('href');
-      const linkText = $link.text().trim();
-      
-      if (href && qualityText) {
-        // Extract quality and size from text like "|| 480p File Size: 460.9MB ||"
-        const qualityMatch = qualityText.match(/(\d+p(?:\s+\w+)?)/);
-        const sizeMatch = qualityText.match(/File Size:\s*([^|]+)/);
-        
-        if (qualityMatch) {
-          downloadLinks.push({
-            url: href,
-            quality: qualityMatch[1].trim(),
-            size: sizeMatch ? sizeMatch[1].trim() : 'Unknown',
-            text: linkText
-          });
-        }
-      }
-    });
-    
-    // Method 2: New download-card structure
-    if (downloadLinks.length === 0) {
-      $('.download-card').each((index, element) => {
-        const $card = $(element);
-        
-        // Extract quality from download-quality-text
-        const qualityText = $card.find('.download-quality-text').text().trim();
-        
-        // Extract size from download-size-info (look for text content, not tooltip)
-        const $sizeInfo = $card.find('.download-size-info');
-        let size = 'Unknown';
-        
-        // Get the text content and extract size (like "2.9GB", "4.1GB", etc.)
-        const sizeText = $sizeInfo.clone().children().remove().end().text().trim();
-        const sizeMatch = sizeText.match(/(\d+(?:\.\d+)?\s*(?:GB|MB))/i);
-        if (sizeMatch) {
-          size = sizeMatch[1].trim();
-        }
-        
-        // Extract download link
-        const $link = $card.find('.tabs-download-button, a[href*="magiclinks"]');
+    // Only extract movie download links if this is not a series with episodes
+    if (!hasEpisodesSection) {
+      // Method 1: Original download-buttons structure
+      $('.download-buttons h4').each((index, element) => {
+        const $h4 = $(element);
+        const qualityText = $h4.text().trim();
+        const $link = $h4.next('p').find('a');
         const href = $link.attr('href');
         const linkText = $link.text().trim();
         
         if (href && qualityText) {
-          downloadLinks.push({
-            url: href,
-            quality: qualityText,
-            size: size,
-            text: linkText || 'FAST DOWNLOAD'
-          });
+          // Extract quality and size from text like "|| 480p File Size: 460.9MB ||"
+          const qualityMatch = qualityText.match(/(\d+p(?:\s+\w+)?)/);
+          const sizeMatch = qualityText.match(/File Size:\s*([^|]+)/);
+          
+          if (qualityMatch) {
+            downloadLinks.push({
+              url: href,
+              quality: qualityMatch[1].trim(),
+              size: sizeMatch ? sizeMatch[1].trim() : 'Unknown',
+              text: linkText
+            });
+          }
         }
       });
-    }
-    
-    // Method 3: Fallback - look for any magiclinks directly
-    if (downloadLinks.length === 0) {
-      $('a[href*="magiclinks"]').each((index, element) => {
-        const $link = $(element);
-        const href = $link.attr('href');
-        const linkText = $link.text().trim();
-        
-        if (href) {
-          // Try to find quality info from nearby elements
-          const $parent = $link.closest('.download-card, .download-option, div');
-          let quality = 'Unknown';
+      
+      // Method 2: New download-card structure
+      if (downloadLinks.length === 0) {
+        $('.download-card').each((index, element) => {
+          const $card = $(element);
+          
+          // Extract quality from download-quality-text
+          const qualityText = $card.find('.download-quality-text').text().trim();
+          
+          // Extract size from download-size-info (look for text content, not tooltip)
+          const $sizeInfo = $card.find('.download-size-info');
           let size = 'Unknown';
           
-          // Look for quality indicators in parent or sibling elements
-          const qualityElement = $parent.find('[class*="quality"], .download-quality-text').first();
-          if (qualityElement.length) {
-            quality = qualityElement.text().trim();
+          // Get the text content and extract size (like "2.9GB", "4.1GB", etc.)
+          const sizeText = $sizeInfo.clone().children().remove().end().text().trim();
+          const sizeMatch = sizeText.match(/(\d+(?:\.\d+)?\s*(?:GB|MB))/i);
+          if (sizeMatch) {
+            size = sizeMatch[1].trim();
           }
           
-          // Look for size indicators
-          const sizeElement = $parent.find('[class*="size"], .download-size-info').first();
-          if (sizeElement.length) {
-            const sizeText = sizeElement.text();
-            const sizeMatch = sizeText.match(/(\d+(?:\.\d+)?\s*(?:GB|MB))/i);
-            if (sizeMatch) {
-              size = sizeMatch[1].trim();
+          // Extract download link
+          const $link = $card.find('.tabs-download-button, a[href*="magiclinks"]');
+          const href = $link.attr('href');
+          const linkText = $link.text().trim();
+          
+          if (href && qualityText) {
+            downloadLinks.push({
+              url: href,
+              quality: qualityText,
+              size: size,
+              text: linkText || 'FAST DOWNLOAD'
+            });
+          }
+        });
+      }
+      
+      // Method 3: Fallback - look for any magiclinks directly
+      if (downloadLinks.length === 0) {
+        $('a[href*="magiclinks"]').each((index, element) => {
+          const $link = $(element);
+          const href = $link.attr('href');
+          const linkText = $link.text().trim();
+          
+          if (href) {
+            // Try to find quality info from nearby elements
+            const $parent = $link.closest('.download-card, .download-option, div');
+            let quality = 'Unknown';
+            let size = 'Unknown';
+            
+            // Look for quality indicators in parent or sibling elements
+            const qualityElement = $parent.find('[class*="quality"], .download-quality-text').first();
+            if (qualityElement.length) {
+              quality = qualityElement.text().trim();
             }
+            
+            // Look for size indicators
+            const sizeElement = $parent.find('[class*="size"], .download-size-info').first();
+            if (sizeElement.length) {
+              const sizeText = sizeElement.text();
+              const sizeMatch = sizeText.match(/(\d+(?:\.\d+)?\s*(?:GB|MB))/i);
+              if (sizeMatch) {
+                size = sizeMatch[1].trim();
+              }
+            }
+            
+            downloadLinks.push({
+              url: href,
+              quality: quality,
+              size: size,
+              text: linkText || 'Download'
+            });
           }
-          
-          downloadLinks.push({
-            url: href,
-            quality: quality,
-            size: size,
-            text: linkText || 'Download'
-          });
-        }
-      });
+        });
+      }
     }
 
     // Extract screenshot image
@@ -221,9 +291,9 @@ async function getKMmoviesDetails(url: string) {
                        title.match(/(\d{4})/)?.[1] || 
                        'Unknown';
     
-    console.log(`Found ${downloadLinks.length} download links`);
+    console.log(`Found ${downloadLinks.length} download links and ${episodes.length} episodes`);
 
-    return {
+    const result = {
       title: movieInfo.movieName || title,
       mainImage: normalizeUrl(mainImage),
       storyline: storyline === 'N/A' ? 'No storyline available.' : storyline,
@@ -234,7 +304,7 @@ async function getKMmoviesDetails(url: string) {
       duration: movieInfo.duration,
       writer: movieInfo.writer,
       ott: movieInfo.ott,
-      isSeries: false, // KMmovies typically has movies
+      isSeries: isSeriesPattern,
       languages,
       availableQualities: [...new Set(availableQualities)],
       downloadLinks,
@@ -242,6 +312,14 @@ async function getKMmoviesDetails(url: string) {
       imdbRating: movieInfo.imdbRating,
       sourceUrl: url
     };
+
+    // Add episodes data if this is a series
+    if (episodes.length > 0) {
+      (result as any).episodes = episodes;
+      (result as any).totalEpisodes = episodes.length;
+    }
+
+    return result;
   } catch (error) {
     console.error('Error fetching KMmovies details:', error);
     throw error;

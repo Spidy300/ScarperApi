@@ -1,63 +1,63 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { ApiKeyService } from '@/lib/services/api-key-service';
 
-export interface AuthResult {
+export interface ApiKeyValidationResult {
   isValid: boolean;
   apiKey?: any;
+  user?: any;
   error?: string;
 }
 
-export async function validateApiKey(request: NextRequest | Request): Promise<AuthResult> {
+export async function validateApiKey(request: Request): Promise<ApiKeyValidationResult> {
   try {
-    // Extract API key from headers
-    const apiKey = request.headers.get('x-api-key') || request.headers.get('authorization')?.replace('Bearer ', '');
-    
+    // Get API key from headers
+    const apiKey = request.headers.get('x-api-key') || 
+                   request.headers.get('authorization')?.replace('Bearer ', '') ||
+                   new URL(request.url).searchParams.get('api_key');
+
+    console.log('API key validation attempt:', { 
+      hasApiKey: !!apiKey, 
+      keyPreview: apiKey ? `${apiKey.slice(0, 8)}...` : 'none' 
+    });
+
     if (!apiKey) {
       return {
         isValid: false,
-        error: 'API key is required. Please provide your API key in the x-api-key header.'
+        error: 'API key is required. Provide it in x-api-key header, authorization header, or api_key query parameter.'
       };
     }
 
-    // Validate and increment usage
-    const validationResult = await ApiKeyService.validateAndIncrementUsage(apiKey);
+    // Validate the API key AND increment user usage in one call
+    const keyData = await ApiKeyService.validateAndIncrementUsage(apiKey);
     
-    if (!validationResult) {
+    if (!keyData) {
+      console.log('API key validation failed: Invalid key or limit exceeded');
       return {
         isValid: false,
-        error: 'Invalid or inactive API key. Please check your API key or create a new one.'
+        error: 'Invalid API key or request limit exceeded. Please check your API key and usage limits.'
       };
     }
+
+    const remainingRequests = Math.max(0, (keyData.requestsLimit || 1000) - (keyData.requestsUsed || 0));
+
+    console.log('API key validation successful and usage incremented:', { 
+      keyName: keyData.keyName,
+      remainingRequests: remainingRequests,
+      requestsUsed: keyData.requestsUsed,
+      requestsLimit: keyData.requestsLimit
+    });
 
     return {
       isValid: true,
-      apiKey: validationResult
+      apiKey: keyData,
+      user: {
+        uid: keyData.userId,
+        requestsUsed: keyData.requestsUsed,
+        requestsLimit: keyData.requestsLimit
+      }
     };
   } catch (error) {
     console.error('API key validation error:', error);
     return {
-      isValid: false,
-      error: 'Failed to validate API key. Please try again.'
-    };
-  }
-}
-
-export function createUnauthorizedResponse(message: string = 'Invalid API key'): NextResponse {
-  return NextResponse.json(
-    { 
-      success: false, 
-      error: 'Unauthorized', 
-      message,
-      code: 'INVALID_API_KEY'
-    },
-    { 
-      status: 401,
-      headers: {
-        'WWW-Authenticate': 'Bearer realm="API"'
-      }
-    }
-  );
-}
       isValid: false,
       error: 'Internal server error during API key validation'
     };
