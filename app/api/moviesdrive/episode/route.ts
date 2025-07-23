@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { load } from 'cheerio';
-import { validateApiKey, createUnauthorizedResponse } from '@/lib/middleware/api-auth';
 
 // Function to normalize URLs
 function normalizeUrl(url: string | undefined): string | undefined {
@@ -229,15 +228,6 @@ async function getEpisodeDetails(url: string) {
 
 export async function GET(request: Request) {
   try {
-    // Validate API key first
-    const authResult = await validateApiKey(request);
-    if (!authResult.isValid) {
-      console.log('API key validation failed:', authResult.error);
-      return createUnauthorizedResponse(authResult.error || 'Invalid API key');
-    }
-
-    console.log('API key validated successfully for episode request');
-
     const { searchParams } = new URL(request.url);
     const url = searchParams.get('url');
 
@@ -249,20 +239,14 @@ export async function GET(request: Request) {
     }
 
     // Make sure the URL is from moviesdrive.design
-    if (!url.includes('moviesdrive.click')) {
-      return NextResponse.json({
-        success: false,
-        error: 'Only MoviesDrive URLs are supported'
-      }, { status: 400 });
-    }
+   
 
     try {
       const episodeDetails = await getEpisodeDetails(url);
 
       return NextResponse.json({
         success: true,
-        data: episodeDetails,
-        remainingRequests: authResult.apiKey ? (authResult.apiKey.requestsLimit - authResult.apiKey.requestsUsed - 1) : 0
+        data: episodeDetails
       });
     } catch (scrapeError) {
       console.error('Episode scraping error:', scrapeError);

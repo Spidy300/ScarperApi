@@ -95,8 +95,12 @@ async function scrapeHDHub4uDetails(url: string): Promise<{ title: string; type:
     // Enhanced content type detection
     const hasDirectDownloads = $('a[href*="hubdrive.wales"], a[href*="hdstream4u.com"], a[href*="hubstream.art"], a[href*="hubcdn.fans"]').length > 0;
     
-    // Enhanced episode detection - look for all possible episode patterns
-    const hasEpisodeLinks = $('h4').toArray().some(element => {
+    // Enhanced episode detection - look for EPiSODE patterns in h3 tags and other sources
+    const hasEpisodeLinks = $('h3').toArray().some(element => {
+      const $heading = $(element);
+      const headingText = $heading.text().trim();
+      return headingText.includes('EPiSODE') && $heading.find('a').length > 0;
+    }) || $('h4').toArray().some(element => {
       const $heading = $(element);
       const headingText = $heading.text().trim();
       return headingText.includes('EPISODE') && $heading.find('a[href*="techyboy4u.com"]').length > 0;
@@ -104,10 +108,6 @@ async function scrapeHDHub4uDetails(url: string): Promise<{ title: string; type:
       const $span = $(element);
       const spanText = $span.text().trim();
       return spanText.includes('EPiSODE') && spanText.match(/EPiSODE\s*\d+/i);
-    }) || $('h3').toArray().some(element => {
-      const $heading = $(element);
-      const headingText = $heading.text().trim();
-      return headingText.includes('EPiSODE') && $heading.find('a[href*="techyboy4u.com"]').length > 0;
     });
 
     console.log('Content detection:', { hasDirectDownloads, hasEpisodeLinks });
@@ -116,7 +116,48 @@ async function scrapeHDHub4uDetails(url: string): Promise<{ title: string; type:
     if (hasEpisodeLinks) {
       console.log('Processing episodes...');
       
-      // Method 1: Extract from traditional EPISODE h4 links
+      // Method 1: Extract from h3 EPiSODE links (new pattern)
+      $('h3').each((_, element) => {
+        const $heading = $(element);
+        const $links = $heading.find('a');
+        
+        $links.each((_, linkElement) => {
+          const $link = $(linkElement);
+          const linkText = $link.text().trim();
+          const linkHref = $link.attr('href');
+          
+          if (linkText.includes('EPiSODE') && linkHref) {
+            const episodeMatch = linkText.match(/EPiSODE\s*(\d+)/i);
+            if (episodeMatch) {
+              const episodeNumber = parseInt(episodeMatch[1]);
+              const episodeText = `Episode ${episodeNumber}`;
+              
+              // Look for watch link in the same h3
+              let watchUrl = '';
+              $heading.find('a').each((_, watchLink) => {
+                const $watchLink = $(watchLink);
+                const watchText = $watchLink.text().trim();
+                const watchHref = $watchLink.attr('href');
+                
+                if (watchText.includes('WATCH') && watchHref) {
+                  watchUrl = watchHref;
+                }
+              });
+              
+              episodes.push({
+                episode: episodeText,
+                episodeNumber,
+                techyboyUrl: linkHref,
+                ...(watchUrl && { watchUrl })
+              });
+              
+              console.log(`Found episode ${episodeNumber}: download=${linkHref}, watch=${watchUrl}`);
+            }
+          }
+        });
+      });
+
+      // Method 2: Extract from traditional EPISODE h4 links
       $('h4').each((_, element) => {
         const $heading = $(element);
         const headingText = $heading.text().trim();
@@ -149,39 +190,6 @@ async function scrapeHDHub4uDetails(url: string): Promise<{ title: string; type:
             }
           }
         }
-      });
-
-      // Method 2: Extract from h3 EPiSODE links (older format)
-      $('h3').each((_, element) => {
-        const $heading = $(element);
-        const $links = $heading.find('a');
-        
-        $links.each((_, linkElement) => {
-          const $link = $(linkElement);
-          const linkText = $link.text().trim();
-          const linkHref = $link.attr('href');
-          
-          if (linkText.includes('EPiSODE') && linkHref && linkHref.includes('techyboy4u.com')) {
-            const episodeMatch = linkText.match(/EPiSODE\s*(\d+)/i);
-            if (episodeMatch) {
-              const episodeNumber = parseInt(episodeMatch[1]);
-              const episodeText = `Episode ${episodeNumber}`;
-              
-              // Check if this episode already exists
-              const existingEpisodeIndex = episodes.findIndex(ep => ep.episodeNumber === episodeNumber);
-              if (existingEpisodeIndex !== -1) {
-                // Update existing episode with techyboy URL
-                episodes[existingEpisodeIndex].techyboyUrl = linkHref;
-              } else {
-                episodes.push({
-                  episode: episodeText,
-                  episodeNumber,
-                  techyboyUrl: linkHref
-                });
-              }
-            }
-          }
-        });
       });
 
       // Method 3: Extract from EPiSODE span patterns with drive links only
