@@ -30,19 +30,14 @@ A comprehensive Next.js-based API service that provides free access to movies, T
 - **ZinkMovies** - Movie streaming
 - **4KHDHub** - 4K quality movies
 - **10BitClub** - High bitrate content
-- **1Full4Movies** - Full movie collection
 - **AllMoviesHub** - Comprehensive movie hub
 - **CinemaLux** - Premium movie content
-- **GdFlix** - Google Drive hosted content
-- **NetMirror** - Mirror streaming service
-- **VidSrc** - Video source aggregator
+- **GdFlix** - Get's Files hosted on GdFlix
+- **NetMirror** - All netflix movies
 
 ### Special Services
-- **VCloud** - Cloud-based video streaming
+- **VCloud** - Get's Files hosted on VCloud
 - **HubCloud** - ⚠️ **VPS Compatibility Warning**: HubCloud service will not work on VPS due to IP restrictions
-- **Gyanigurus** - Educational content
-- **LeechPro** - Professional leeching service
-- **MDrive** - Media drive service
 
 ## 🛠️ Installation
 
@@ -63,15 +58,11 @@ Create a `.env.local` file with the following variables:
 # Database
 DATABASE_URL="your_neon_database_url" Get From https://neon.com/
 
-# Application
-NEXTAUTH_SECRET="your_nextauth_secret"
-NEXTAUTH_URL="http://localhost:3000"
-```
+
 
 4. **Database Setup**
 ```bash
-npm run db:generate
-npm run db:migrate
+npx drizzle-kit push
 ```
 
 5. **Run the development server**
@@ -96,9 +87,7 @@ Search for `localhost:3000` or hardcoded URLs and replace with your production d
 
 All API endpoints require authentication via API key. Include your API key in requests using one of these methods:
 
-1. **Header**: `x-api-key: your_api_key`
-2. **Authorization**: `Authorization: Bearer your_api_key`
-3. **Query Parameter**: `?api_key=your_api_key`
+ **Header**: `x-api-key: your_api_key`
 
 ## 📚 API Documentation
 
@@ -226,7 +215,7 @@ CMD ["npm", "start"]
 
 ## 🎨 Tech Stack
 
-- **Framework**: Next.js 14 with TypeScript
+- **Framework**: Next.js 15 with TypeScript
 - **Database**: Neon PostgreSQL with Drizzle ORM
 - **Authentication**: Firebase Auth
 - **UI Components**: shadcn/ui + Radix UI
