@@ -1,49 +1,58 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getBaseUrl } from "@/lib/baseurl";
 
 interface SearchResult {
   id: string;
   title: string;
   url: string;
   imageUrl: string;
-  category: string[];
-  imdbId: string;
 }
 
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
-    const query = searchParams.get("q");
+    const query = searchParams.get("q") || searchParams.get("s");
     const page = searchParams.get("page") || "1";
 
     if (!query) {
       return NextResponse.json(
-        { error: "Query parameter 'q' is required" },
+        { error: "Search query parameter (q or s) is required" },
         { status: 400 }
       );
     }
 
-    const baseUrl = await getBaseUrl("drive");
-    const searchUrl = `${baseUrl}/searchapi.php?q=${encodeURIComponent(query)}&page=${page}`;
+    // Format query: replace spaces with +
+    const formattedQuery = query.replace(/\s+/g, '+');
+    const searchUrl = `https://search.pingora.fyi/collections/post/documents/search?q=${formattedQuery}&query_by=post_title&page=${page}`;
 
     const response = await fetch(searchUrl, {
       headers: {
-        "Referer": `${baseUrl}/search.html?q=${encodeURIComponent(query)}`,
+        "Origin": "https://new2.hdhub4u.fo",
+        "Referer": "https://new2.hdhub4u.fo/",
         "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
         "Accept": "application/json",
+        "Priority": "u=1, i",
+        "Sec-CH-UA": '"Brave";v="143", "Chromium";v="143", "Not A(Brand";v="24"',
+        "Sec-CH-UA-Mobile": "?0",
+        "Sec-CH-UA-Platform": '"Linux"',
+        "Sec-Fetch-Dest": "empty",
+        "Sec-Fetch-Mode": "cors",
+        "Sec-Fetch-Site": "cross-site",
+        "Sec-GPC": "1",
       },
     });
 
     if (!response.ok) {
       return NextResponse.json(
-        { error: "Failed to fetch search results from Drive" },
+        { error: "Failed to search on HDHub4u" },
         { status: response.status }
       );
     }
 
     const data = await response.json();
-    const results: SearchResult[] = [];
 
+    const searchResults: SearchResult[] = [];
+
+    // Parse JSON response
     if (data.hits && Array.isArray(data.hits)) {
       data.hits.forEach((hit: unknown) => {
         const document = (hit as { document?: Record<string, unknown> }).document || {};
@@ -51,17 +60,13 @@ export async function GET(request: NextRequest) {
         const title = String(document.post_title || '');
         const url = String(document.permalink || '');
         const imageUrl = String(document.post_thumbnail || '');
-        const category = Array.isArray(document.category) ? document.category.map(String) : [];
-        const imdbId = String(document.imdb_id || '');
 
         if (title && url) {
-          results.push({
+          searchResults.push({
             id,
             title,
             url,
             imageUrl,
-            category,
-            imdbId,
           });
         }
       });
@@ -74,14 +79,14 @@ export async function GET(request: NextRequest) {
       data: {
         query,
         page: pageNumber,
-        results,
-        totalResults: results.length,
+        results: searchResults,
+        totalResults: searchResults.length,
         found: typeof data.found === 'number' ? data.found : 0,
       },
     });
 
   } catch (error) {
-    console.error("Error in Drive search API:", error);
+    console.error("Error in HDHub4u Search API:", error);
     return NextResponse.json(
       { 
         error: "Internal server error", 
