@@ -30,6 +30,57 @@ interface ApiEndpoint {
 
 const API_ENDPOINTS: ApiEndpoint[] = [
   {
+    name: "4kHDHub Home",
+    method: "GET",
+    endpoint: "/api/4khdhub",
+    description: "Get recent movies and TV shows from 4kHDHub homepage",
+    requiresAuth: true,
+    parameters: [
+      { name: "page", type: "string", required: false, description: "Page number (default: 1)" },
+    ],
+    tsExample: `const response = await fetch(\`\${baseUrl}/api/4khdhub?page=1\`, {
+  method: 'GET',
+  headers: {
+    'x-api-key': 'YOUR_API_KEY',
+    'Content-Type': 'application/json'
+  }
+});
+
+interface Movie {
+  title: string;
+  url: string;
+  imageUrl: string;
+  year: string;
+  season?: string;
+  formats: string[];
+}
+
+const movies: Movie[] = await response.json();
+console.log(movies);`,
+    jsExample: `fetch(\`\${baseUrl}/api/4khdhub?page=1\`, {
+  method: 'GET',
+  headers: {
+    'x-api-key': 'YOUR_API_KEY',
+    'Content-Type': 'application/json'
+  }
+})
+  .then(response => response.json())
+  .then(movies => console.log(movies))
+  .catch(error => console.error('Error:', error));`,
+    curlExample: `curl -X GET "https://your-domain.com/api/4khdhub?page=1" \\
+  -H "x-api-key: YOUR_API_KEY" \\
+  -H "Content-Type: application/json"`,
+    responseExample: `[
+  {
+    "title": "Inception (2010)",
+    "url": "/inception-2010",
+    "imageUrl": "https://...",
+    "year": "2010",
+    "formats": ["4K", "BluRay", "WEB-DL"]
+  }
+]`
+  },
+  {
     name: "4kHDHub Search",
     method: "GET",
     endpoint: "/api/4khdhub/search",
@@ -139,6 +190,56 @@ console.log(details);`,
 }`
   },
   {
+    name: "DesireMovies Home",
+    method: "GET",
+    endpoint: "/api/desiremovies",
+    description: "Get recent movies from DesireMovies homepage",
+    requiresAuth: true,
+    parameters: [
+      { name: "page", type: "string", required: false, description: "Page number (default: 1)" },
+    ],
+    tsExample: `const response = await fetch(\`\${baseUrl}/api/desiremovies?page=1\`, {
+  method: 'GET',
+  headers: {
+    'x-api-key': 'YOUR_API_KEY',
+    'Content-Type': 'application/json'
+  }
+});
+
+interface Movie {
+  id: string;
+  title: string;
+  url: string;
+  imageUrl: string;
+  description: string;
+}
+
+const movies: Movie[] = await response.json();
+console.log(movies);`,
+    jsExample: `fetch(\`\${baseUrl}/api/desiremovies?page=1\`, {
+  method: 'GET',
+  headers: {
+    'x-api-key': 'YOUR_API_KEY',
+    'Content-Type': 'application/json'
+  }
+})
+  .then(response => response.json())
+  .then(movies => console.log(movies))
+  .catch(error => console.error('Error:', error));`,
+    curlExample: `curl -X GET "https://your-domain.com/api/desiremovies?page=1" \\
+  -H "x-api-key: YOUR_API_KEY" \\
+  -H "Content-Type: application/json"`,
+    responseExample: `[
+  {
+    "id": "12345",
+    "title": "Avatar: The Way of Water",
+    "url": "/avatar-the-way-of-water-2022",
+    "imageUrl": "https://...",
+    "description": "Set more than a decade after..."
+  }
+]`
+  },
+  {
     name: "DesireMovies Search",
     method: "GET",
     endpoint: "/api/desiremovies/search",
@@ -236,6 +337,166 @@ console.log(details);`,
 }`
   },
   {
+    name: "Drive Home",
+    method: "GET",
+    endpoint: "/api/drive",
+    description: "Get recent movies from Drive homepage",
+    requiresAuth: true,
+    parameters: [
+      { name: "page", type: "string", required: false, description: "Page number (default: 1)" },
+    ],
+    tsExample: `const response = await fetch(\`\${baseUrl}/api/drive?page=1\`, {
+  method: 'GET',
+  headers: {
+    'x-api-key': 'YOUR_API_KEY',
+    'Content-Type': 'application/json'
+  }
+});
+
+interface Movie {
+  title: string;
+  url: string;
+  imageUrl: string;
+  quality: string;
+}
+
+const movies: Movie[] = await response.json();
+console.log(movies);`,
+    jsExample: `fetch(\`\${baseUrl}/api/drive?page=1\`, {
+  method: 'GET',
+  headers: {
+    'x-api-key': 'YOUR_API_KEY',
+    'Content-Type': 'application/json'
+  }
+})
+  .then(response => response.json())
+  .then(movies => console.log(movies))
+  .catch(error => console.error('Error:', error));`,
+    curlExample: `curl -X GET "https://your-domain.com/api/drive?page=1" \\
+  -H "x-api-key: YOUR_API_KEY" \\
+  -H "Content-Type: application/json"`,
+    responseExample: `[
+  {
+    "title": "Inception",
+    "url": "/movie/inception-2010",
+    "imageUrl": "https://...",
+    "quality": "1080p"
+  }
+]`
+  },
+  {
+    name: "NetMirror Home",
+    method: "GET",
+    endpoint: "/api/netmirror",
+    description: "Get recent content from NetMirror homepage",
+    requiresAuth: true,
+    parameters: [],
+    tsExample: `const response = await fetch(\`\${baseUrl}/api/netmirror\`, {
+  method: 'GET',
+  headers: {
+    'x-api-key': 'YOUR_API_KEY',
+    'Content-Type': 'application/json'
+  }
+});
+
+interface NetMirrorItem {
+  id: string;
+  title: string;
+  imageUrl: string;
+  postUrl: string;
+  category: string;
+}
+
+interface Response {
+  success: boolean;
+  data: {
+    items: NetMirrorItem[];
+    totalResults: number;
+  };
+}
+
+const result: Response = await response.json();
+console.log(result);`,
+    jsExample: `fetch(\`\${baseUrl}/api/netmirror\`, {
+  method: 'GET',
+  headers: {
+    'x-api-key': 'YOUR_API_KEY',
+    'Content-Type': 'application/json'
+  }
+})
+  .then(response => response.json())
+  .then(result => console.log(result))
+  .catch(error => console.error('Error:', error));`,
+    curlExample: `curl -X GET "https://your-domain.com/api/netmirror" \\
+  -H "x-api-key: YOUR_API_KEY" \\
+  -H "Content-Type: application/json"`,
+    responseExample: `{
+  "success": true,
+  "data": {
+    "items": [
+      {
+        "id": "12345",
+        "title": "Movie Title",
+        "imageUrl": "https://...",
+        "postUrl": "/post/movie-title",
+        "category": "Movies"
+      }
+    ],
+    "totalResults": 50
+  }
+}`
+  },
+  {
+    name: "Movies4u Home",
+    method: "GET",
+    endpoint: "/api/movies4u",
+    description: "Get recent movies from Movies4u homepage",
+    requiresAuth: true,
+    parameters: [
+      { name: "page", type: "string", required: false, description: "Page number (default: 1)" },
+    ],
+    tsExample: `const response = await fetch(\`\${baseUrl}/api/movies4u?page=1\`, {
+  method: 'GET',
+  headers: {
+    'x-api-key': 'YOUR_API_KEY',
+    'Content-Type': 'application/json'
+  }
+});
+
+interface Movie {
+  id: string;
+  title: string;
+  url: string;
+  imageUrl: string;
+  videoLabel: string;
+}
+
+const movies: Movie[] = await response.json();
+console.log(movies);`,
+    jsExample: `fetch(\`\${baseUrl}/api/movies4u?page=1\`, {
+  method: 'GET',
+  headers: {
+    'x-api-key': 'YOUR_API_KEY',
+    'Content-Type': 'application/json'
+  }
+})
+  .then(response => response.json())
+  .then(movies => console.log(movies))
+  .catch(error => console.error('Error:', error));`,
+    curlExample: `curl -X GET "https://your-domain.com/api/movies4u?page=1" \\
+  -H "x-api-key: YOUR_API_KEY" \\
+  -H "Content-Type: application/json"`,
+    responseExample: `[
+  {
+    "id": "batman-2022",
+    "title": "The Batman",
+    "url": "/the-batman-2022",
+    "imageUrl": "https://...",
+    "videoLabel": "BluRay"
+  }
+]`
+  },
+  {
     name: "Movies4u Search",
     method: "GET",
     endpoint: "/api/movies4u/search",
@@ -329,6 +590,54 @@ console.log(details);`,
     }
   ]
 }`
+  },
+  {
+    name: "HDHub4U Home",
+    method: "GET",
+    endpoint: "/api/hdhub4u",
+    description: "Get recent movies from HDHub4U homepage",
+    requiresAuth: true,
+    parameters: [
+      { name: "page", type: "string", required: false, description: "Page number (default: 1)" },
+    ],
+    tsExample: `const response = await fetch(\`\${baseUrl}/api/hdhub4u?page=1\`, {
+  method: 'GET',
+  headers: {
+    'x-api-key': 'YOUR_API_KEY',
+    'Content-Type': 'application/json'
+  }
+});
+
+interface Movie {
+  id: string;
+  title: string;
+  url: string;
+  imageUrl: string;
+}
+
+const movies: Movie[] = await response.json();
+console.log(movies);`,
+    jsExample: `fetch(\`\${baseUrl}/api/hdhub4u?page=1\`, {
+  method: 'GET',
+  headers: {
+    'x-api-key': 'YOUR_API_KEY',
+    'Content-Type': 'application/json'
+  }
+})
+  .then(response => response.json())
+  .then(movies => console.log(movies))
+  .catch(error => console.error('Error:', error));`,
+    curlExample: `curl -X GET "https://your-domain.com/api/hdhub4u?page=1" \\
+  -H "x-api-key: YOUR_API_KEY" \\
+  -H "Content-Type: application/json"`,
+    responseExample: `[
+  {
+    "id": "avengers-2019",
+    "title": "Avengers: Endgame",
+    "url": "/movie/avengers-endgame-2019",
+    "imageUrl": "https://..."
+  }
+]`
   },
   {
     name: "HDHub4U Search",
@@ -437,6 +746,56 @@ console.log(details);`,
 }`
   },
   {
+    name: "Zeefliz Home",
+    method: "GET",
+    endpoint: "/api/zeefliz",
+    description: "Get recent movies and shows from Zeefliz homepage",
+    requiresAuth: true,
+    parameters: [
+      { name: "page", type: "string", required: false, description: "Page number (default: 1)" },
+    ],
+    tsExample: `const response = await fetch(\`\${baseUrl}/api/zeefliz?page=1\`, {
+  method: 'GET',
+  headers: {
+    'x-api-key': 'YOUR_API_KEY',
+    'Content-Type': 'application/json'
+  }
+});
+
+interface Movie {
+  id: string;
+  title: string;
+  url: string;
+  imageUrl: string;
+  quality: string;
+}
+
+const movies: Movie[] = await response.json();
+console.log(movies);`,
+    jsExample: `fetch(\`\${baseUrl}/api/zeefliz?page=1\`, {
+  method: 'GET',
+  headers: {
+    'x-api-key': 'YOUR_API_KEY',
+    'Content-Type': 'application/json'
+  }
+})
+  .then(response => response.json())
+  .then(movies => console.log(movies))
+  .catch(error => console.error('Error:', error));`,
+    curlExample: `curl -X GET "https://your-domain.com/api/zeefliz?page=1" \\
+  -H "x-api-key: YOUR_API_KEY" \\
+  -H "Content-Type: application/json"`,
+    responseExample: `[
+  {
+    "id": "stranger-things",
+    "title": "Stranger Things",
+    "url": "/stranger-things-complete-series",
+    "imageUrl": "https://...",
+    "quality": "1080p"
+  }
+]`
+  },
+  {
     name: "Zeefliz Search",
     method: "GET",
     endpoint: "/api/zeefliz/search",
@@ -530,6 +889,54 @@ console.log(details);`,
 }`
   },
   {
+    name: "Vega Movies Home",
+    method: "GET",
+    endpoint: "/api/vega",
+    description: "Get recent movies from Vega Movies homepage",
+    requiresAuth: true,
+    parameters: [
+      { name: "page", type: "string", required: false, description: "Page number (default: 1)" },
+    ],
+    tsExample: `const response = await fetch(\`\${baseUrl}/api/vega?page=1\`, {
+  method: 'GET',
+  headers: {
+    'x-api-key': 'YOUR_API_KEY',
+    'Content-Type': 'application/json'
+  }
+});
+
+interface Movie {
+  title: string;
+  url: string;
+  imageUrl: string;
+  date: string;
+}
+
+const movies: Movie[] = await response.json();
+console.log(movies);`,
+    jsExample: `fetch(\`\${baseUrl}/api/vega?page=1\`, {
+  method: 'GET',
+  headers: {
+    'x-api-key': 'YOUR_API_KEY',
+    'Content-Type': 'application/json'
+  }
+})
+  .then(response => response.json())
+  .then(movies => console.log(movies))
+  .catch(error => console.error('Error:', error));`,
+    curlExample: `curl -X GET "https://your-domain.com/api/vega?page=1" \\
+  -H "x-api-key: YOUR_API_KEY" \\
+  -H "Content-Type: application/json"`,
+    responseExample: `[
+  {
+    "title": "Spider-Man: No Way Home",
+    "url": "/movie/spiderman-no-way-home",
+    "imageUrl": "https://...",
+    "date": "2021-12-15"
+  }
+]`
+  },
+  {
     name: "Vega Movies Search",
     method: "GET",
     endpoint: "/api/vega/search",
@@ -612,6 +1019,72 @@ console.log(details);`,
       "url": "https://..."
     }
   ]
+}`
+  },
+  {
+    name: "ZinkMovies Home",
+    method: "GET",
+    endpoint: "/api/zinkmovies",
+    description: "Get recent movies from ZinkMovies homepage (slider and trending)",
+    requiresAuth: true,
+    parameters: [
+      { name: "page", type: "string", required: false, description: "Page number (default: 1)" },
+    ],
+    tsExample: `const response = await fetch(\`\${baseUrl}/api/zinkmovies?page=1\`, {
+  method: 'GET',
+  headers: {
+    'x-api-key': 'YOUR_API_KEY',
+    'Content-Type': 'application/json'
+  }
+});
+
+interface Movie {
+  id: string;
+  title: string;
+  url: string;
+  imageUrl: string;
+  rating: string;
+  quality: string;
+  language: string;
+  year: string;
+  type: string;
+}
+
+interface Response {
+  slider: Movie[];
+  trending: Movie[];
+}
+
+const data: Response = await response.json();
+console.log(data);`,
+    jsExample: `fetch(\`\${baseUrl}/api/zinkmovies?page=1\`, {
+  method: 'GET',
+  headers: {
+    'x-api-key': 'YOUR_API_KEY',
+    'Content-Type': 'application/json'
+  }
+})
+  .then(response => response.json())
+  .then(data => console.log(data))
+  .catch(error => console.error('Error:', error));`,
+    curlExample: `curl -X GET "https://your-domain.com/api/zinkmovies?page=1" \\
+  -H "x-api-key: YOUR_API_KEY" \\
+  -H "Content-Type: application/json"`,
+    responseExample: `{
+  "slider": [
+    {
+      "id": "joker-2019",
+      "title": "Joker",
+      "url": "/movie/joker-2019",
+      "imageUrl": "https://...",
+      "rating": "8.4",
+      "quality": "BluRay",
+      "language": "English",
+      "year": "2019",
+      "type": "movie"
+    }
+  ],
+  "trending": [...]
 }`
   },
   {
@@ -712,7 +1185,7 @@ export default function DocumentationPage() {
   const [userApiKey, setUserApiKey] = useState<string | null>(null)
   const [editableParams, setEditableParams] = useState<Record<number, Record<string, string>>>({})
 
-  // Fetch user's API key on mount
+  // Fetch user's API key on mount - we get the masked version for display only
   useEffect(() => {
     const fetchApiKey = async () => {
       if (!session?.user) return
@@ -724,11 +1197,11 @@ export default function DocumentationPage() {
         
         if (response.ok) {
           const keys = await response.json()
-          // Find first active key
+          // Find first active key - this will be masked for display
           const activeKey = keys.find((k: any) => k.isActive)
           if (activeKey) {
-            // Extract the full key (API returns masked, so we need to use the one from creation or store it)
-            // For now, we'll show a message if user needs to use their own key
+            // Store the masked key for display purposes
+            // The actual key will be retrieved server-side via session when testing
             setUserApiKey(activeKey.key)
           }
         }
@@ -758,19 +1231,17 @@ export default function DocumentationPage() {
     }))
   }
 
-  // Get code example with user's API key
+  // Get code example with user's API key (masked for display)
   const getCodeExample = (endpoint: ApiEndpoint, language: 'typescript' | 'javascript') => {
     const example = language === 'typescript' ? endpoint.tsExample : endpoint.jsExample
-    const displayKey = userApiKey && !userApiKey.includes('*') 
-      ? userApiKey.slice(0, 8) + '*'.repeat(24) 
-      : 'YOUR_API_KEY'
+    // Show masked key if available, otherwise show placeholder
+    const displayKey = userApiKey || 'YOUR_API_KEY'
     return example.replace(/YOUR_API_KEY/g, displayKey)
   }
 
   const getCurlExample = (endpoint: ApiEndpoint) => {
-    const displayKey = userApiKey && !userApiKey.includes('*') 
-      ? userApiKey.slice(0, 8) + '*'.repeat(24) 
-      : 'YOUR_API_KEY'
+    // Show masked key if available, otherwise show placeholder
+    const displayKey = userApiKey || 'YOUR_API_KEY'
     return endpoint.curlExample.replace(/YOUR_API_KEY/g, displayKey)
   }
 
@@ -778,6 +1249,16 @@ export default function DocumentationPage() {
     // Check if user is authenticated
     if (!session?.user) {
       router.push('/login')
+      return
+    }
+
+    // Check if user has an active API key
+    if (!userApiKey) {
+      setTestResponse({ 
+        index, 
+        data: null, 
+        error: 'No active API key found. Please create an API key from the APIs page first.' 
+      })
       return
     }
 
@@ -803,34 +1284,29 @@ export default function DocumentationPage() {
         url += `?${params.toString()}`
       }
 
+      // Don't send x-api-key header - the backend will use session authentication
+      // via the validateApiKey function which checks session when no key is provided
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
-      }
-
-      // Use user's API key if available
-      if (endpoint.requiresAuth) {
-        if (userApiKey && !userApiKey.includes('*')) {
-          headers['x-api-key'] = userApiKey
-        } else {
-          // If we don't have the full key, show error message
-          setTestResponse({ 
-            index, 
-            data: null, 
-            error: 'Please copy your API key from the APIs page and use it in your requests. The Try button works best right after creating a new key.' 
-          })
-          setTestingEndpoint(null)
-          return
-        }
       }
 
       const response = await fetch(url, {
         method: endpoint.method,
         headers,
-        credentials: 'include'
+        credentials: 'include' // Important: include credentials for session
       })
 
       const data = await response.json()
-      setTestResponse({ index, data })
+      
+      if (!response.ok) {
+        setTestResponse({ 
+          index, 
+          data: null, 
+          error: data.error || data.message || `Request failed with status ${response.status}` 
+        })
+      } else {
+        setTestResponse({ index, data })
+      }
     } catch (error) {
       setTestResponse({ 
         index, 
@@ -858,17 +1334,17 @@ export default function DocumentationPage() {
         <p className="text-muted-foreground text-lg">
           Complete reference for all available API endpoints with code examples
         </p>
-        {session?.user && userApiKey && !userApiKey.includes('*') && (
+        {session?.user && userApiKey && (
           <div className="mt-4 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
             <p className="text-sm text-green-600 dark:text-green-400">
-              ✓ Your API key is active. You can now test endpoints directly.
+              ✓ Your API key ({userApiKey}) is active. You can test endpoints using your session.
             </p>
           </div>
         )}
-        {session?.user && (!userApiKey || userApiKey.includes('*')) && (
+        {session?.user && !userApiKey && (
           <div className="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
             <p className="text-sm text-yellow-600 dark:text-yellow-400">
-              ⚠ To test endpoints, please create or copy your API key from the <a href="/dashboard/apis" className="underline font-medium">APIs page</a>.
+              ⚠ To test endpoints, please create an API key from the <a href="/dashboard/apis" className="underline font-medium">APIs page</a>.
             </p>
           </div>
         )}
