@@ -19,4 +19,6 @@ export const PROVIDERS: Provider[] = [
   { name: "ZinkMovies", endpoint: "/api/zinkmovies/search" },
   { name: "DesireMovies", endpoint: "/api/desiremovies/search" },
   { name: "NetMirror", endpoint: "/api/netmirror/search" },
+  { name: "AnimeSalt", endpoint: "/api/animesalt/search" },
+  { name: "KMMovies", endpoint: "/api/kmmovies/search" },
 ];
