@@ -3,6 +3,7 @@ export const ANIMESALT_ENDPOINTS = [
     name: "AnimeSalt Home",
     method: "GET",
     endpoint: "/api/animesalt",
+    provider: "AnimeSalt",
     description: "Get recent anime releases from AnimeSalt homepage",
     requiresAuth: true,
     parameters: [
@@ -67,6 +68,7 @@ console.log(data);`,
     name: "AnimeSalt Search",
     method: "GET",
     endpoint: "/api/animesalt/search",
+    provider: "AnimeSalt",
     description: "Search anime on AnimeSalt",
     requiresAuth: true,
     parameters: [
@@ -133,6 +135,7 @@ console.log(data);`,
     name: "AnimeSalt Details",
     method: "GET",
     endpoint: "/api/animesalt/details",
+    provider: "AnimeSalt",
     description: "Get anime details including episodes and download links",
     requiresAuth: true,
     parameters: [
@@ -220,8 +223,7 @@ console.log(data);`,
   {
     name: "AnimeSalt Stream",
     method: "GET",
-    endpoint: "/api/animesalt/stream",
-    description: "Get streaming links for anime episodes",
+    endpoint: "/api/animesalt/stream",    provider: "AnimeSalt",    description: "Get streaming links for anime episodes",
     requiresAuth: true,
     parameters: [
       { name: "url", type: "string", required: true, description: "Episode URL" },

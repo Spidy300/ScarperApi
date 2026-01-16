@@ -2,8 +2,7 @@ export const KMMOVIES_ENDPOINTS = [
   {
     name: "KMMovies Home",
     method: "GET",
-    endpoint: "/api/kmmovies",
-    description: "Get latest movie releases from KMMovies homepage",
+    endpoint: "/api/kmmovies",    provider: "KMMovies",    description: "Get latest movie releases from KMMovies homepage",
     requiresAuth: true,
     parameters: [
       { name: "page", type: "string", required: false, description: "Page number (default: 1)" },
@@ -77,6 +76,7 @@ console.log(data);`,
     name: "KMMovies Search",
     method: "GET",
     endpoint: "/api/kmmovies/search",
+    provider: "KMMovies",
     description: "Search movies on KMMovies",
     requiresAuth: true,
     parameters: [
@@ -143,6 +143,7 @@ console.log(data);`,
     name: "KMMovies Details",
     method: "GET",
     endpoint: "/api/kmmovies/details",
+    provider: "KMMovies",
     description: "Get movie details including screenshots, info, and download links",
     requiresAuth: true,
     parameters: [
@@ -254,6 +255,7 @@ console.log(data);`,
     name: "KMMovies Magic Links",
     method: "GET",
     endpoint: "/api/kmmovies/magiclinks",
+    provider: "KMMovies",
     description: "Get all download server links from magic links page with resolved streaming URLs",
     requiresAuth: true,
     parameters: [

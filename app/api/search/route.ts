@@ -136,7 +136,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get base URL for API calls
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
 
     console.log(`Searching across ${PROVIDERS.length} providers for: ${query}`);
 

@@ -24,6 +24,7 @@ interface ApiEndpoint {
   endpoint: string
   description: string
   requiresAuth: boolean
+  provider: string
   parameters?: { name: string; type: string; required: boolean; description: string }[]
   tsExample: string
   jsExample: string
@@ -36,6 +37,7 @@ const API_ENDPOINTS: ApiEndpoint[] = [
     name: "4kHDHub Home",
     method: "GET",
     endpoint: "/api/4khdhub",
+    provider: "4kHDHub",
     description: "Get recent movies and TV shows from 4kHDHub homepage",
     requiresAuth: true,
     parameters: [
@@ -87,6 +89,7 @@ console.log(movies);`,
     name: "4kHDHub Search",
     method: "GET",
     endpoint: "/api/4khdhub/search",
+    provider: "4kHDHub",
     description: "Search movies and TV shows on 4kHDHub",
     requiresAuth: true,
     parameters: [
@@ -138,6 +141,7 @@ console.log(results);`,
     name: "4kHDHub Details",
     method: "GET",
     endpoint: "/api/4khdhub/details",
+    provider: "4kHDHub",
     description: "Get movie/show details and download links from 4kHDHub",
     requiresAuth: true,
     parameters: [
@@ -196,6 +200,7 @@ console.log(details);`,
     name: "DesireMovies Home",
     method: "GET",
     endpoint: "/api/desiremovies",
+    provider: "DesireMovies",
     description: "Get recent movies from DesireMovies homepage",
     requiresAuth: true,
     parameters: [
@@ -246,6 +251,7 @@ console.log(movies);`,
     name: "DesireMovies Search",
     method: "GET",
     endpoint: "/api/desiremovies/search",
+    provider: "DesireMovies",
     description: "Search movies on DesireMovies",
     requiresAuth: true,
     parameters: [
@@ -299,6 +305,7 @@ console.log(results);`,
     name: "DesireMovies Details",
     method: "GET",
     endpoint: "/api/desiremovies/details",
+    provider: "DesireMovies",
     description: "Get movie details and download links from DesireMovies",
     requiresAuth: true,
     parameters: [
@@ -343,6 +350,7 @@ console.log(details);`,
     name: "Drive Home",
     method: "GET",
     endpoint: "/api/drive",
+    provider: "Drive",
     description: "Get recent movies from Drive homepage",
     requiresAuth: true,
     parameters: [
@@ -391,6 +399,7 @@ console.log(movies);`,
     name: "NetMirror Home",
     method: "GET",
     endpoint: "/api/netmirror",
+    provider: "NetMirror",
     description: "Get recent content from NetMirror homepage",
     requiresAuth: true,
     parameters: [],
@@ -453,6 +462,7 @@ console.log(result);`,
     name: "Movies4u Home",
     method: "GET",
     endpoint: "/api/movies4u",
+    provider: "Movies4u",
     description: "Get recent movies from Movies4u homepage",
     requiresAuth: true,
     parameters: [
@@ -503,6 +513,7 @@ console.log(movies);`,
     name: "Movies4u Search",
     method: "GET",
     endpoint: "/api/movies4u/search",
+    provider: "Movies4u",
     description: "Search movies on Movies4u",
     requiresAuth: true,
     parameters: [
@@ -554,6 +565,7 @@ console.log(results);`,
     name: "Movies4u Details",
     method: "GET",
     endpoint: "/api/movies4u/details",
+    provider: "Movies4u",
     description: "Get movie details and download links from Movies4u",
     requiresAuth: true,
     parameters: [
@@ -598,6 +610,7 @@ console.log(details);`,
     name: "HDHub4U Home",
     method: "GET",
     endpoint: "/api/hdhub4u",
+    provider: "HDHub4U",
     description: "Get recent movies from HDHub4U homepage",
     requiresAuth: true,
     parameters: [
@@ -646,6 +659,7 @@ console.log(movies);`,
     name: "HDHub4U Search",
     method: "GET",
     endpoint: "/api/hdhub4u/search",
+    provider: "HDHub4U",
     description: "Search movies on HDHub4U",
     requiresAuth: true,
     parameters: [
@@ -696,6 +710,7 @@ console.log(results);`,
     name: "HDHub4U Details",
     method: "GET",
     endpoint: "/api/hdhub4u/details",
+    provider: "HDHub4U",
     description: "Get movie details and download links",
     requiresAuth: true,
     parameters: [
@@ -752,6 +767,7 @@ console.log(details);`,
     name: "Zeefliz Home",
     method: "GET",
     endpoint: "/api/zeefliz",
+    provider: "Zeefliz",
     description: "Get recent movies and shows from Zeefliz homepage",
     requiresAuth: true,
     parameters: [
@@ -802,6 +818,7 @@ console.log(movies);`,
     name: "Zeefliz Search",
     method: "GET",
     endpoint: "/api/zeefliz/search",
+    provider: "Zeefliz",
     description: "Search movies and shows on Zeefliz",
     requiresAuth: true,
     parameters: [
@@ -851,6 +868,7 @@ console.log(results);`,
     name: "Zeefliz Details",
     method: "GET",
     endpoint: "/api/zeefliz/details",
+    provider: "Zeefliz",
     description: "Get movie/show details and download links from Zeefliz",
     requiresAuth: true,
     parameters: [
@@ -895,6 +913,7 @@ console.log(details);`,
     name: "Vega Movies Home",
     method: "GET",
     endpoint: "/api/vega",
+    provider: "Vega Movies",
     description: "Get recent movies from Vega Movies homepage",
     requiresAuth: true,
     parameters: [
@@ -943,6 +962,7 @@ console.log(movies);`,
     name: "Vega Movies Search",
     method: "GET",
     endpoint: "/api/vega/search",
+    provider: "Vega Movies",
     description: "Search movies on Vega Movies",
     requiresAuth: true,
     parameters: [
@@ -984,6 +1004,7 @@ console.log(results);`,
     name: "Vega Movies Details",
     method: "GET",
     endpoint: "/api/vega/details",
+    provider: "Vega Movies",
     description: "Get movie details and download links from Vega Movies",
     requiresAuth: true,
     parameters: [
@@ -1028,6 +1049,7 @@ console.log(details);`,
     name: "ZinkMovies Home",
     method: "GET",
     endpoint: "/api/zinkmovies",
+    provider: "ZinkMovies",
     description: "Get recent movies from ZinkMovies homepage (slider and trending)",
     requiresAuth: true,
     parameters: [
@@ -1094,6 +1116,7 @@ console.log(data);`,
     name: "ZinkMovies Search",
     method: "GET",
     endpoint: "/api/zinkmovies/search",
+    provider: "ZinkMovies",
     description: "Search movies on ZinkMovies",
     requiresAuth: true,
     parameters: [
@@ -1135,6 +1158,7 @@ console.log(results);`,
     name: "ZinkMovies Details",
     method: "GET",
     endpoint: "/api/zinkmovies/details",
+    provider: "ZinkMovies",
     description: "Get movie details and download links from ZinkMovies",
     requiresAuth: true,
     parameters: [
@@ -1190,7 +1214,7 @@ export default function DocumentationPage() {
   const [testResponse, setTestResponse] = useState<{index: number, data: any, error?: string} | null>(null)
   const [userApiKey, setUserApiKey] = useState<string | null>(null)
   const [editableParams, setEditableParams] = useState<Record<number, Record<string, string>>>({})
-
+  const [selectedProvider, setSelectedProvider] = useState<string | null>(null)
   // Fetch user's API key on mount - we get the masked version for display only
   useEffect(() => {
     const fetchApiKey = async () => {
@@ -1374,10 +1398,34 @@ export default function DocumentationPage() {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+
+        <span className="text-sm font-medium ml-6">Provider:</span>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="w-[180px] justify-between">
+              {selectedProvider ? selectedProvider : "All Providers"}
+              <ChevronDown className="ml-2 h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuItem key="all-providers" onClick={() => setSelectedProvider(null)}>
+              {selectedProvider === null && <Check className="h-4 w-4 mr-2" />}
+              All Providers
+            </DropdownMenuItem>
+            {Array.from(new Set(API_ENDPOINTS.map(e => e.provider))).sort().map((provider) => (
+              <DropdownMenuItem key={provider} onClick={() => setSelectedProvider(provider)}>
+                {selectedProvider === provider && <Check className="h-4 w-4 mr-2" />}
+                {provider}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <div className="space-y-6">
-        {API_ENDPOINTS.map((endpoint, index) => (
+        {API_ENDPOINTS.filter((endpoint) => 
+          selectedProvider ? endpoint.provider === selectedProvider : true
+        ).map((endpoint, index) => (
           <Card key={index} className="overflow-hidden">
             <CardHeader>
               <div className="flex items-start justify-between">
