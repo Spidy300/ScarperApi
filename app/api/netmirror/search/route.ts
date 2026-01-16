@@ -21,7 +21,7 @@ interface NetMirrorSearchResponse {
  */
 async function searchNetMirror(query: string, timestamp: string): Promise<Record<string, unknown> | { rawResponse: string; contentType: string; searchUrl: string }> {
   try {
-    const baseUrl = await getBaseUrl('nfmirror');
+    const baseUrl = await getBaseUrl('nfMirror');
     const cookies = await getCookies();
     
     // Remove trailing slash from baseUrl if it exists, then add search.php
@@ -85,7 +85,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<NetMirrorS
 
   try {
     const { searchParams } = new URL(request.url);
-    const query = searchParams.get('q') || searchParams.get('p');
+    const query = searchParams.get('q');
 
     if (!query) {
       return NextResponse.json({
@@ -102,7 +102,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<NetMirrorS
     const searchResults = await searchNetMirror(query, currentTimestamp);
 
     // Construct the search URL for reference
-    const baseUrl = await getBaseUrl('netmirror');
+    const baseUrl = await getBaseUrl('nfMirror');
     const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
     const searchUrl = `${cleanBaseUrl}/search.php?s=${encodeURIComponent(query)}&t=${currentTimestamp}`;
 

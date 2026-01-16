@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getBaseUrl, getCookies } from '@/lib/baseurl';
+import { validateApiKey, createUnauthorizedResponse } from '@/lib/api-auth';
 
 interface NetMirrorPostResponse {
     success: boolean;
@@ -17,7 +18,7 @@ interface NetMirrorPostResponse {
  */
 async function fetchNetMirrorPost(id: string, timestamp: string): Promise<Record<string, unknown>> {
     try {
-        const baseUrl = await getBaseUrl('nfmirror');
+        const baseUrl = await getBaseUrl('nfMirror');
         const cookies = await getCookies();
 
         // Remove trailing slash from baseUrl if it exists, then add post.php
@@ -72,6 +73,12 @@ async function fetchNetMirrorPost(id: string, timestamp: string): Promise<Record
 }
 
 export async function GET(request: NextRequest): Promise<NextResponse<NetMirrorPostResponse>> {
+    // Validate API key
+    const validation = await validateApiKey(request);
+    if (!validation.valid) {
+        return createUnauthorizedResponse(validation.error || "Unauthorized") as NextResponse<NetMirrorPostResponse>;
+    }
+
     try {
         const { searchParams } = new URL(request.url);
         const id = searchParams.get('id');

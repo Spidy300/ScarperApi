@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCookies } from '@/lib/baseurl';
+import { validateApiKey, createUnauthorizedResponse } from '@/lib/api-auth';
 
 interface NetMirrorStreamResponse {
     success: boolean;
@@ -166,6 +167,12 @@ async function getPlaylist(id: string, timestamp: string, h: string): Promise<an
 }
 
 export async function GET(request: NextRequest): Promise<NextResponse<NetMirrorStreamResponse>> {
+    // Validate API key
+    const validation = await validateApiKey(request);
+    if (!validation.valid) {
+        return createUnauthorizedResponse(validation.error || "Unauthorized") as NextResponse<NetMirrorStreamResponse>;
+    }
+
     try {
         const { searchParams } = new URL(request.url);
         const id = searchParams.get('id');
