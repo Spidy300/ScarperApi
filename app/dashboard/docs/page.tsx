@@ -16,6 +16,7 @@ import { ChevronDown, Copy, Play, Check, Loader2 } from "lucide-react"
 import { useSession } from "@/lib/auth-client"
 import { ANIMESALT_ENDPOINTS } from "../../../components/docs-components/animesalt-docs"
 import { KMMOVIES_ENDPOINTS } from "../../../components/docs-components/kmmovies-docs"
+import { NETMIRROR_ENDPOINTS } from "../../../components/docs-components/netmirror-docs"
 
 interface ApiEndpoint {
   name: string
@@ -1176,7 +1177,8 @@ console.log(details);`,
 }`
   },
   ...ANIMESALT_ENDPOINTS,
-  ...KMMOVIES_ENDPOINTS
+  ...KMMOVIES_ENDPOINTS,
+  ...NETMIRROR_ENDPOINTS
 ]
 
 export default function DocumentationPage() {

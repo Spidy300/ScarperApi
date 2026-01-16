@@ -61,11 +61,11 @@ const menuItems = [
     icon: FileTextIcon,
     href: "/dashboard/docs",
   },
-  {
-    title: "Settings",
-    icon: SettingsIcon,
-    href: "/dashboard/settings",
-  },
+  // {
+  //   title: "Settings",
+  //   icon: SettingsIcon,
+  //   href: "/dashboard/settings",
+  // },
 ];
 
 function DashboardSidebar() {
