@@ -23,6 +23,7 @@ import { XOZ_ENDPOINTS } from "../../../components/docs-components/xoz-docs"
 import { XS_ENDPOINTS } from "../../../components/docs-components/xs-docs"
 import { EXTRACTORS_ENDPOINTS } from "../../../components/docs-components/extractors-docs"
 import { UHDMOVIES_ENDPOINTS } from "../../../components/docs-components/uhdmovies-docs"
+import { MOD_ENDPOINTS } from "../../../components/docs-components/mod-docs"
 
 interface ApiEndpoint {
   name: string
@@ -1260,7 +1261,8 @@ console.log(details);`,
   ...XOZ_ENDPOINTS,
   ...XS_ENDPOINTS,
   ...EXTRACTORS_ENDPOINTS,
-  ...UHDMOVIES_ENDPOINTS
+  ...UHDMOVIES_ENDPOINTS,
+  ...MOD_ENDPOINTS
 ]
 
 export default function DocumentationPage() {

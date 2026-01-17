@@ -21,6 +21,7 @@ export const ALL_PROVIDERS = [
   "AnimeSalt",
   "KMMovies",
   "UhdMovies",
+  "Moviesmod",
   "Adult",
 ] as const;
 
