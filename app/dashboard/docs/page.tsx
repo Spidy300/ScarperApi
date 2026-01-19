@@ -451,6 +451,237 @@ console.log(movies);`,
 ]`
   },
   {
+    name: "Drive Search",
+    method: "GET",
+    endpoint: "/api/drive/search",
+    provider: "Drive",
+    description: "Search movies and TV shows on Drive",
+    requiresAuth: true,
+    parameters: [
+      { name: "q", type: "string", required: true, description: "Search query" },
+      { name: "page", type: "string", required: false, description: "Page number (default: 1)" },
+    ],
+    tsExample: `const response = await fetch(\`\${baseUrl}/api/drive/search?q=\${query}&page=1\`, {
+  method: 'GET',
+  headers: {
+    'x-api-key': 'YOUR_API_KEY',
+    'Content-Type': 'application/json'
+  }
+});
+
+interface SearchResult {
+  id: string;
+  title: string;
+  url: string;
+  imageUrl: string;
+  category: string[];
+  imdbId: string;
+}
+
+interface SearchResponse {
+  success: boolean;
+  data: {
+    query: string;
+    page: number;
+    results: SearchResult[];
+    totalResults: number;
+    found: number;
+  };
+}
+
+const data: SearchResponse = await response.json();
+console.log(data);`,
+    jsExample: `fetch(\`\${baseUrl}/api/drive/search?q=\${query}&page=1\`, {
+  method: 'GET',
+  headers: {
+    'x-api-key': 'YOUR_API_KEY',
+    'Content-Type': 'application/json'
+  }
+})
+  .then(response => response.json())
+  .then(data => console.log(data))
+  .catch(error => console.error('Error:', error));`,
+    curlExample: `curl -X GET "https://screenscapeapi.dev/api/drive/search?q=inception&page=1" \\
+  -H "x-api-key: YOUR_API_KEY" \\
+  -H "Content-Type: application/json"`,
+    responseExample: `{
+  "success": true,
+  "data": {
+    "query": "inception",
+    "page": 1,
+    "results": [
+      {
+        "id": "12345",
+        "title": "Inception",
+        "url": "/movie/inception-2010",
+        "imageUrl": "https://...",
+        "category": ["Action", "Sci-Fi"],
+        "imdbId": "tt1375666"
+      }
+    ],
+    "totalResults": 10,
+    "found": 150
+  }
+}`
+  },
+  {
+    name: "Drive Details",
+    method: "GET",
+    endpoint: "/api/drive/details",
+    provider: "Drive",
+    description: "Get detailed information and download links for a movie or TV show",
+    requiresAuth: true,
+    parameters: [
+      { name: "url", type: "string", required: true, description: "Full URL of the movie/show page" },
+    ],
+    tsExample: `const response = await fetch(\`\${baseUrl}/api/drive/details?url=\${encodeURIComponent(movieUrl)}\`, {
+  method: 'GET',
+  headers: {
+    'x-api-key': 'YOUR_API_KEY',
+    'Content-Type': 'application/json'
+  }
+});
+
+interface DownloadLink {
+  title: string;
+  url: string;
+}
+
+interface MovieDetails {
+  title: string;
+  imdbRating: string;
+  language: string;
+  year: string;
+  episodeSize: string;
+  completeZip: string;
+  quality: string;
+  format: string;
+  storyline: string;
+  screenshots: string[];
+  downloadLinks: {
+    "480p": DownloadLink[];
+    "720p": DownloadLink[];
+    "1080p": DownloadLink[];
+    "4K": DownloadLink[];
+  };
+}
+
+const details: MovieDetails = await response.json();
+console.log(details);`,
+    jsExample: `fetch(\`\${baseUrl}/api/drive/details?url=\${encodeURIComponent(movieUrl)}\`, {
+  method: 'GET',
+  headers: {
+    'x-api-key': 'YOUR_API_KEY',
+    'Content-Type': 'application/json'
+  }
+})
+  .then(response => response.json())
+  .then(details => console.log(details))
+  .catch(error => console.error('Error:', error));`,
+    curlExample: `curl -X GET "https://screenscapeapi.dev/api/drive/details?url=https%3A%2F%2Fdrive.com%2Fmovie%2Finception-2010" \\
+  -H "x-api-key: YOUR_API_KEY" \\
+  -H "Content-Type: application/json"`,
+    responseExample: `{
+  "title": "Inception (2010)",
+  "imdbRating": "8.8/10",
+  "language": "English",
+  "year": "2010",
+  "episodeSize": "300MB",
+  "completeZip": "2.5GB",
+  "quality": "BluRay",
+  "format": "MKV",
+  "storyline": "A thief who steals corporate secrets...",
+  "screenshots": ["https://...", "https://..."],
+  "downloadLinks": {
+    "480p": [
+      {
+        "title": "480p x264",
+        "url": "https://..."
+      }
+    ],
+    "720p": [
+      {
+        "title": "720p x264",
+        "url": "https://..."
+      }
+    ],
+    "1080p": [
+      {
+        "title": "1080p x264",
+        "url": "https://..."
+      }
+    ],
+    "4K": []
+  }
+}`
+  },
+  {
+    name: "Drive MDrive",
+    method: "GET",
+    endpoint: "/api/drive/mdrive",
+    provider: "Drive",
+    description: "Extract HubCloud download links for episodes or movies",
+    requiresAuth: true,
+    parameters: [
+      { name: "url", type: "string", required: true, description: "Full URL of the page containing HubCloud links" },
+    ],
+    tsExample: `const response = await fetch(\`\${baseUrl}/api/drive/mdrive?url=\${encodeURIComponent(pageUrl)}\`, {
+  method: 'GET',
+  headers: {
+    'x-api-key': 'YOUR_API_KEY',
+    'Content-Type': 'application/json'
+  }
+});
+
+interface Episode {
+  episode: string;
+  size: string;
+  hubCloudUrl: string;
+}
+
+interface MDriveResponse {
+  success: boolean;
+  url: string;
+  title: string;
+  totalEpisodes: number;
+  episodes: Episode[];
+}
+
+const data: MDriveResponse = await response.json();
+console.log(data);`,
+    jsExample: `fetch(\`\${baseUrl}/api/drive/mdrive?url=\${encodeURIComponent(pageUrl)}\`, {
+  method: 'GET',
+  headers: {
+    'x-api-key': 'YOUR_API_KEY',
+    'Content-Type': 'application/json'
+  }
+})
+  .then(response => response.json())
+  .then(data => console.log(data))
+  .catch(error => console.error('Error:', error));`,
+    curlExample: `curl -X GET "https://screenscapeapi.dev/api/drive/mdrive?url=https%3A%2F%2Fdrive.com%2Fseries%2Fbreaking-bad" \\
+  -H "x-api-key: YOUR_API_KEY" \\
+  -H "Content-Type: application/json"`,
+    responseExample: `{
+  "success": true,
+  "url": "https://drive.com/series/breaking-bad",
+  "title": "Breaking Bad S01",
+  "totalEpisodes": 7,
+  "episodes": [
+    {
+      "episode": "Ep1",
+      "size": "150MB",
+      "hubCloudUrl": "https://hubcloud.lol/..."
+    },
+    {
+      "episode": "Ep2",
+      "size": "155MB",
+      "hubCloudUrl": "https://hubcloud.lol/..."
+    }
+  ]
+}`
+  },
+  {
     name: "NetMirror Home",
     method: "GET",
     endpoint: "/api/netmirror",
@@ -1096,6 +1327,65 @@ console.log(details);`,
       "quality": "1080p",
       "size": "2.8GB",
       "url": "https://..."
+    }
+  ]
+}`
+  },
+  {
+    name: "Vega Movies NextDrive",
+    method: "GET",
+    endpoint: "/api/vega/nextdrive",
+    provider: "Vega Movies",
+    description: "Extract V-Cloud download links from Vega Movies pages",
+    requiresAuth: true,
+    parameters: [
+      { name: "url", type: "string", required: true, description: "Full URL of the Vega Movies page" },
+    ],
+    tsExample: `const response = await fetch(\`\${baseUrl}/api/vega/nextdrive?url=\${encodeURIComponent(pageUrl)}\`, {
+  method: 'GET',
+  headers: {
+    'x-api-key': 'YOUR_API_KEY',
+    'Content-Type': 'application/json'
+  }
+});
+
+interface VCloudLink {
+  label: string;
+  url: string;
+}
+
+interface NextDriveResponse {
+  success: boolean;
+  title: string;
+  vcloudLinks: VCloudLink[];
+}
+
+const data: NextDriveResponse = await response.json();
+console.log(data);`,
+    jsExample: `fetch(\`\${baseUrl}/api/vega/nextdrive?url=\${encodeURIComponent(pageUrl)}\`, {
+  method: 'GET',
+  headers: {
+    'x-api-key': 'YOUR_API_KEY',
+    'Content-Type': 'application/json'
+  }
+})
+  .then(response => response.json())
+  .then(data => console.log(data))
+  .catch(error => console.error('Error:', error));`,
+    curlExample: `curl -X GET "https://screenscapeapi.dev/api/vega/nextdrive?url=https%3A%2F%2Fvegamovies.com%2Fmovie%2Fspiderman-2021" \\
+  -H "x-api-key: YOUR_API_KEY" \\
+  -H "Content-Type: application/json"`,
+    responseExample: `{
+  "success": true,
+  "title": "Spider-Man: No Way Home",
+  "vcloudLinks": [
+    {
+      "label": "V-Cloud 1080p",
+      "url": "https://vcloud.lol/..."
+    },
+    {
+      "label": "V-Cloud 720p",
+      "url": "https://vcloud.lol/..."
     }
   ]
 }`

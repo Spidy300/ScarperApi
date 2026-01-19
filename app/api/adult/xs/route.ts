@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { load } from 'cheerio';
+import { validateProviderAccess, createProviderErrorResponse } from '@/lib/provider-validator';
 
 export async function GET(request: NextRequest) {
+  const validation = await validateProviderAccess(request, "Adult");
+  if (!validation.valid) {
+    return createProviderErrorResponse(validation.error || "Unauthorized");
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const page = searchParams.get('page') || '1';
