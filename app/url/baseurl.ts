@@ -3,3 +3,4 @@ export const hmasterBaseUrl = 'aHR0cHM6Ly94aGFtc3RlcjE5LmNvbS8=';
 export const xozillaBaseUrl = 'https://xozilla.com/';
 export const xp = 'https://xprimehub.my/';
 export const zteen = 'https://www.zteenporn.com/';
+export const xx = 'https://www.24xxx.porn/';

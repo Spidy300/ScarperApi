@@ -15,6 +15,15 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ChevronDown, Copy, Play, Check, Loader2 } from "lucide-react"
 import { useSession } from "@/lib/auth-client"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { ANIMESALT_ENDPOINTS } from "../../../components/docs-components/animesalt-docs"
 import { KMMOVIES_ENDPOINTS } from "../../../components/docs-components/kmmovies-docs"
 import { NETMIRROR_ENDPOINTS } from "../../../components/docs-components/netmirror-docs"
@@ -25,6 +34,7 @@ import { XP_ENDPOINTS } from "../../../components/docs-components/xp-docs"
 import { EXTRACTORS_ENDPOINTS } from "../../../components/docs-components/extractors-docs"
 import { UHDMOVIES_ENDPOINTS } from "../../../components/docs-components/uhdmovies-docs"
 import { MOD_ENDPOINTS } from "../../../components/docs-components/mod-docs"
+import { ZTEEN_ENDPOINTS } from "../../../components/docs-components/zteen-docs"
 
 interface ApiEndpoint {
   name: string
@@ -1703,6 +1713,7 @@ console.log(episodeData);`,
   ...XOZ_ENDPOINTS,
   ...XS_ENDPOINTS,
   ...XP_ENDPOINTS,
+  ...ZTEEN_ENDPOINTS,
   ...EXTRACTORS_ENDPOINTS,
   ...UHDMOVIES_ENDPOINTS,
   ...MOD_ENDPOINTS
@@ -1718,6 +1729,21 @@ export default function DocumentationPage() {
   const [userApiKey, setUserApiKey] = useState<string | null>(null)
   const [editableParams, setEditableParams] = useState<Record<number, Record<string, string>>>({})
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null)
+  const [showVpsWarning, setShowVpsWarning] = useState<boolean>(true)
+  
+  // Check localStorage for VPS warning dismissal
+  useEffect(() => {
+    const warningDismissed = localStorage.getItem('vps-warning-dismissed')
+    if (warningDismissed === 'true') {
+      setShowVpsWarning(false)
+    }
+  }, [])
+  
+  const dismissVpsWarning = () => {
+    localStorage.setItem('vps-warning-dismissed', 'true')
+    setShowVpsWarning(false)
+  }
+  
   // Fetch user's API key on mount - we get the masked version for display only
   useEffect(() => {
     const fetchApiKey = async () => {
@@ -2187,6 +2213,50 @@ export default function DocumentationPage() {
           </Card>
         ))}
       </div>
+
+      {/* VPS/Proxy Warning AlertDialog */}
+      <AlertDialog open={showVpsWarning} onOpenChange={setShowVpsWarning}>
+        <AlertDialogContent className="max-w-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-red-600 dark:text-red-400">
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              Important: VPS & Proxy Notice
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 text-base">
+                <div className="text-foreground">
+                  Some providers may not work properly when accessed from VPS servers or cloud hosting. 
+                  This is due to regional restrictions and IP-based blocking implemented by the source websites.
+                </div>
+                <div>
+                  <div className="font-semibold text-foreground mb-2">
+                    Recommended Solutions:
+                  </div>
+                  <ul className="list-disc list-inside space-y-1 text-muted-foreground ml-2">
+                    <li>Use a proxy service with residential IPs</li>
+                    <li>Host your application on a local server or personal network</li>
+                    <li>Use a VPN with IP rotation capabilities</li>
+                    <li>Consider using rotating proxy services for production environments</li>
+                  </ul>
+              <p className="text-sm text-muted-foreground italic">
+                Click &ldquo;I Understand&rdquo; to dismiss this message. It won&apos;t be shown again.
+              </p>
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction 
+              onClick={dismissVpsWarning} 
+              className="bg-red-600 hover:bg-red-700 w-full sm:w-auto"
+            >
+              I Understand
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
