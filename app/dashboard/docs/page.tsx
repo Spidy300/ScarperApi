@@ -28,6 +28,7 @@ import { ANIMESALT_ENDPOINTS } from "../../../components/docs-components/animesa
 import { KMMOVIES_ENDPOINTS } from "../../../components/docs-components/kmmovies-docs"
 import { NETMIRROR_ENDPOINTS } from "../../../components/docs-components/netmirror-docs"
 import { XM_ENDPOINTS } from "../../../components/docs-components/xm-docs"
+import { XX_ENDPOINTS } from "../../../components/docs-components/xx-docs"
 import { XOZ_ENDPOINTS } from "../../../components/docs-components/xoz-docs"
 import { XS_ENDPOINTS } from "../../../components/docs-components/xs-docs"
 import { XP_ENDPOINTS } from "../../../components/docs-components/xp-docs"
@@ -1710,6 +1711,7 @@ console.log(episodeData);`,
   ...KMMOVIES_ENDPOINTS,
   ...NETMIRROR_ENDPOINTS,
   ...XM_ENDPOINTS,
+  ...XX_ENDPOINTS,
   ...XOZ_ENDPOINTS,
   ...XS_ENDPOINTS,
   ...XP_ENDPOINTS,
