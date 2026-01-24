@@ -4,6 +4,7 @@ import * as cheerio from 'cheerio';
 import { validateProviderAccess, createProviderErrorResponse } from '@/lib/provider-validator';
 
 const PROXY_URL = 'https://odd-cloud-1e14.hunternisha55.workers.dev/';
+const BASE_URL = 'https://xvideos.place';
 
 interface RelatedVideo {
   id: number;
@@ -104,6 +105,12 @@ export async function GET(request: NextRequest) {
         }
       }
     });
+
+    // Transform related videos URLs to include base URL
+    relatedVideos = relatedVideos.map(video => ({
+      ...video,
+      u: video.u.startsWith('http') ? video.u : `${BASE_URL}${video.u}`
+    }));
 
     // Step 2: Fetch iframe content to extract video URL and related videos
     const iframeResponse = await axios.get(iframeUrl, {

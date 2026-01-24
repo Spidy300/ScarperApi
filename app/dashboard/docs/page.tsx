@@ -37,6 +37,7 @@ import { EXTRACTORS_ENDPOINTS } from "../../../components/docs-components/extrac
 import { UHDMOVIES_ENDPOINTS } from "../../../components/docs-components/uhdmovies-docs"
 import { MOD_ENDPOINTS } from "../../../components/docs-components/mod-docs"
 import { ZTEEN_ENDPOINTS } from "../../../components/docs-components/zteen-docs"
+import { XV_ENDPOINTS } from "../../../components/docs-components/xv-docs"
 
 interface ApiEndpoint {
   name: string
@@ -1718,6 +1719,7 @@ console.log(episodeData);`,
   ...XP_ENDPOINTS,
   ...SB_ENDPOINTS,
   ...ZTEEN_ENDPOINTS,
+  ...XV_ENDPOINTS,
   ...EXTRACTORS_ENDPOINTS,
   ...UHDMOVIES_ENDPOINTS,
   ...MOD_ENDPOINTS
