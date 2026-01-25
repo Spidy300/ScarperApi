@@ -5,3 +5,4 @@ export const xp = 'https://xprimehub.my/';
 export const zteen = 'https://www.zteenporn.com/';
 export const xx = 'https://www.24xxx.porn/';
 export const sb = 'https://spankbang.com/';
+export const fm = 'https://fuckmaza.com/';
