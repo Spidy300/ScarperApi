@@ -4,6 +4,7 @@ import {
   validateProviderAccess,
   createProviderErrorResponse,
 } from '@/lib/provider-validator';
+import { fetchWithScraperApi } from '@/lib/scraper-api';
 
 const BASE_URL = 'https://spankbang.com';
 
@@ -24,25 +25,7 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const proxyUrl = `https://odd-cloud-1e14.hunternisha55.workers.dev/?url=${encodeURIComponent(
-      url
-    )}`;
-
-    const response = await fetch(proxyUrl, {
-      headers: {
-        'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      },
-    });
-
-    if (!response.ok) {
-      return NextResponse.json(
-        { error: `Failed to fetch URL: ${response.statusText}` },
-        { status: response.status }
-      );
-    }
-
-    const html = await response.text();
+    const html = await fetchWithScraperApi(url);
     const data = extractStreamData(html);
 
     if (!data) {

@@ -2265,6 +2265,60 @@ export default function DocumentationPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Educational Purpose Disclaimer */}
+      <div className="mt-12 mb-8">
+        <Card className="border-yellow-500/30 bg-yellow-500/5">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0">
+                <svg 
+                  className="h-8 w-8 text-yellow-500" 
+                  fill="none" 
+                  viewBox="0 0 24 24" 
+                  stroke="currentColor"
+                >
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    strokeWidth={2} 
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" 
+                  />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-yellow-700 dark:text-yellow-400 mb-3">
+                  ⚠️ Educational Purpose & Legal Disclaimer
+                </h3>
+                <div className="space-y-2 text-sm text-yellow-800 dark:text-yellow-300">
+                  <p>
+                    <strong>This project is intended for educational purposes only.</strong> It is designed to demonstrate 
+                    web scraping techniques, API development, and full-stack application architecture.
+                  </p>
+                  <p>
+                    We do not claim ownership of any content, media, or materials accessed through this API. 
+                    All rights to the original content belong to their respective owners and providers.
+                  </p>
+                  <p>
+                    By using this API, you acknowledge that:
+                  </p>
+                  <ul className="list-disc list-inside ml-4 space-y-1">
+                    <li>You are responsible for complying with all applicable laws and regulations in your jurisdiction</li>
+                    <li>This service is provided &quot;as is&quot; without warranties of any kind</li>
+                    <li>The developers and contributors are not liable for any misuse of this API</li>
+                    <li>You will respect copyright laws and terms of service of the source websites</li>
+                    <li>This API should not be used for commercial purposes without proper authorization</li>
+                  </ul>
+                  <p className="mt-3 font-semibold">
+                    Use this API responsibly and at your own risk. If you are a content owner and wish to have your 
+                    content removed, please contact the project maintainers.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }
