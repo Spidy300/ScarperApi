@@ -92,7 +92,7 @@ export async function GET(request: NextRequest) {
               type = 'G-Drive';
             } else if (linkText.includes('Telegram')) {
               type = 'Telegram';
-            } else if (linkText.includes('
+            } 
             
             
             options.push({
